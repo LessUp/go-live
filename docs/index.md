@@ -20,7 +20,7 @@ title: 首页
 ## 快速开始
 
 ```bash
-git clone https://github.com/<your-account>/go-live.git
+git clone https://github.com/LessUp/go-live.git
 cd go-live
 go mod tidy
 go run ./cmd/server

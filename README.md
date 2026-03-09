@@ -1,5 +1,10 @@
 # live-webrtc-go
 
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=github)](https://lessup.github.io/go-live/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+简体中文 | [English](README.en.md)
+
 使用 Go + [Pion WebRTC](https://github.com/pion/webrtc) 构建的轻量级在线直播服务示例。实现了 WHIP 推流、WHEP 播放、嵌入式 Web 页面、可配置鉴权与房间状态查询，可作为开源参考或项目脚手架。
 
 ## 功能特点
@@ -19,7 +24,7 @@
 
 ```bash
 # 克隆仓库
- git clone https://github.com/<your-account>/live-webrtc-go.git
+ git clone https://github.com/LessUp/go-live.git
  cd live-webrtc-go
 
 # （确保 go 已加入 PATH，推荐 Go 1.21+）
@@ -186,7 +191,7 @@ docker compose up -d
 
 项目文档已通过 GitHub Pages 发布，访问地址：
 
-> **https://\<your-account\>.github.io/go-live/**
+> **https://lessup.github.io/go-live/**
 
 也可直接阅读源文件：
 
