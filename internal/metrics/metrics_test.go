@@ -2,9 +2,7 @@ package metrics
 
 import (
 	"testing"
-	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 

@@ -34,7 +34,7 @@ help:
 # Build configuration
 BINARY_NAME=live-webrtc-go
 DOCKER_IMAGE=live-webrtc-go:latest
-GO_VERSION=1.21
+GO_VERSION=1.22
 
 # Build the application
 build:
