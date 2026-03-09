@@ -182,7 +182,13 @@ docker compose up -d
 
 > 若你在实际项目中使用本仓库，欢迎分享反馈与改进建议。
 
-## 延伸文档
+## 在线文档
+
+项目文档已通过 GitHub Pages 发布，访问地址：
+
+> **https://\<your-account\>.github.io/go-live/**
+
+也可直接阅读源文件：
 
 - [使用指南](docs/usage.md)：完整的启动、部署、API 示例与排障。
 - [设计说明](docs/design.md)：架构背景、模块拆分与数据流。
