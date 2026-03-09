@@ -1,35 +1,38 @@
-# live-webrtc-go Documentation Site
-# GitHub Pages + Jekyll configuration
-
-title: live-webrtc-go
-description: 使用 Go + Pion WebRTC 构建的轻量级在线直播服务
+title: Go-Live
+description: >-
+  使用 Go + Pion WebRTC 构建的轻量级在线直播服务 — WHIP/WHEP 推拉流、SFU 转发、录制与 Prometheus 监控
 remote_theme: pages-themes/cayman@v0.2.0
-
-# Build settings
-markdown: kramdown
-highlighter: rouge
-
-# Plugins
 plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
+repository: LessUp/go-live
+show_downloads: false
 
-# Navigation (used by includes/nav.html if overridden)
-nav:
-  - title: 首页
-    url: /
-  - title: 使用指南
-    url: /usage
-  - title: 设计说明
-    url: /design
-
-# SEO
-url: ""
-baseurl: "/go-live"
+# SEO & metadata
+url: https://lessup.github.io
+baseurl: /go-live
 lang: zh-CN
+author: LessUp
+
+# Markdown rendering
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# Default layout for all pages
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
 
 # Exclude non-doc files
 exclude:
   - Gemfile
   - Gemfile.lock
   - vendor
+  - "*.go"
+  - "*.mod"
+  - "*.sum"
