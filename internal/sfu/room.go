@@ -51,25 +51,10 @@ func (r *Room) stats() RoomInfo {
 
 // iceConfig 生成 ICE 配置，优先使用配置中的 STUN/TURN。
 func (r *Room) iceConfig() webrtc.Configuration {
-	var servers []webrtc.ICEServer
 	if r.mgr != nil && r.mgr.cfg != nil {
-		if len(r.mgr.cfg.STUN) > 0 {
-			servers = append(servers, webrtc.ICEServer{URLs: r.mgr.cfg.STUN})
-		}
-		if len(r.mgr.cfg.TURN) > 0 {
-			s := webrtc.ICEServer{URLs: r.mgr.cfg.TURN}
-			if r.mgr.cfg.TURNUsername != "" || r.mgr.cfg.TURNPassword != "" {
-				s.Username = r.mgr.cfg.TURNUsername
-				s.Credential = r.mgr.cfg.TURNPassword
-				s.CredentialType = webrtc.ICECredentialTypePassword
-			}
-			servers = append(servers, s)
-		}
+		return r.mgr.cfg.ICEConfig()
 	}
-	if len(servers) == 0 {
-		servers = []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}
-	}
-	return webrtc.Configuration{ICEServers: servers}
+	return webrtc.Configuration{ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}}}
 }
 
 // Publish 接收主播的 SDP Offer，创建 PeerConnection 并拉起 track fanout。

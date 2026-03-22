@@ -3,82 +3,79 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Publisher</title>
-  <style>
-    body { font-family: system-ui, Segoe UI, Arial, sans-serif; margin: 24px; }
-    video { width: 60vw; max-width: 960px; background: #000; }
-    label { display: inline-block; min-width: 80px; }
-  </style>
+  <title>推流控制台</title>
+  <link rel="stylesheet" href="/web/app.css" />
 </head>
 <body>
-  <h1>推流（Publisher）</h1>
-  <div>
-    <label>房间:</label>
-    <input id="room" value="demo" />
-    <button id="start">开始推流</button>
-  </div>
-  <div style="margin-top:8px;">
-    <label>Token:</label>
-    <input id="token" placeholder="可选，若服务端开启鉴权" />
-  </div>
-  <p id="log"></p>
-  <video id="preview" autoplay playsinline muted></video>
+  <main class="page">
+    <section class="hero">
+      <div class="actions" style="justify-content:space-between;grid-template-columns:1fr auto auto;">
+        <a href="/web/index.html">← 返回首页</a>
+        <a href="/web/player.html"><button type="button" class="button-secondary">去播放页</button></a>
+        <a href="/web/records.html"><button type="button" class="button-secondary">录制列表</button></a>
+      </div>
+      <h1>推流（Publisher）</h1>
+      <p>统一的推流页面：自动读取运行时配置，建立连接后展示本地预览，并支持停止与重试。</p>
+    </section>
 
+    <section class="panel">
+      <div class="form-grid">
+        <div class="field">
+          <label for="room">房间名</label>
+          <input id="room" value="demo" />
+        </div>
+        <div class="field">
+          <label for="token">Token</label>
+          <input id="token" placeholder="可选，服务端开启鉴权时填写" />
+        </div>
+      </div>
+      <div class="actions" style="margin-top:16px;">
+        <button id="start" type="button">开始推流</button>
+        <button id="stop" type="button" class="button-secondary" disabled>停止推流</button>
+      </div>
+      <p id="status" class="status status--info" style="margin-top:16px;">准备就绪，等待开始推流。</p>
+    </section>
+
+    <section class="panel">
+      <h2>本地预览</h2>
+      <div class="video-frame">
+        <video id="preview" autoplay playsinline muted></video>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>连接日志</h2>
+      <pre id="log" class="log"></pre>
+    </section>
+  </main>
+
+  <script src="/web/app.js"></script>
+  <script src="/web/webrtc.js"></script>
   <script>
-    const log = (m) => { document.getElementById('log').textContent = m; console.log(m); };
-    const startBtn = document.getElementById('start');
-    const roomInput = document.getElementById('room');
-    const tokenInput = document.getElementById('token');
-    const preview = document.getElementById('preview');
+    const { qs, initRoomAndToken } = window.GoLiveApp;
 
-    async function start() {
-      startBtn.disabled = true;
-      const room = roomInput.value || 'demo';
-      const token = tokenInput.value.trim();
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
-      });
-      pc.onconnectionstatechange = () => log('PC state: ' + pc.connectionState);
+    const roomInput = qs('room');
+    const tokenInput = qs('token');
+    const startBtn = qs('start');
+    const stopBtn = qs('stop');
+    const statusEl = qs('status');
+    const previewEl = qs('preview');
+    const logEl = qs('log');
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      preview.srcObject = stream;
-      for (const track of stream.getTracks()) {
-        pc.addTrack(track, stream);
-      }
+    initRoomAndToken(roomInput, tokenInput);
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      // wait for ICE gathering complete (non-trickle)
-      await new Promise((resolve) => {
-        if (pc.iceGatheringState === 'complete') return resolve();
-        const check = () => {
-          if (pc.iceGatheringState === 'complete') {
-            pc.removeEventListener('icegatheringstatechange', check);
-            resolve();
-          }
-        };
-        pc.addEventListener('icegatheringstatechange', check);
-        // also timeout after 2s to avoid hanging forever
-        setTimeout(() => { pc.removeEventListener('icegatheringstatechange', check); resolve(); }, 2000);
-      });
+    const session = window.GoLiveWebRTC.createPublisherSession({
+      roomInput,
+      tokenInput,
+      startBtn,
+      stopBtn,
+      statusEl,
+      mediaEl: previewEl,
+      logEl,
+    });
 
-      const headers = { 'Content-Type': 'application/sdp' };
-      if (token) headers['Authorization'] = 'Bearer ' + token;
-      const resp = await fetch(`/api/whip/publish/${encodeURIComponent(room)}`, {
-        method: 'POST',
-        headers,
-        body: pc.localDescription.sdp,
-      });
-      if (!resp.ok) {
-        log('服务器错误: ' + await resp.text());
-        return;
-      }
-      const answerSDP = await resp.text();
-      await pc.setRemoteDescription({ type: 'answer', sdp: answerSDP });
-      log('推流已建立');
-    }
-
-    startBtn.onclick = start;
+    startBtn.addEventListener('click', () => session.start());
+    stopBtn.addEventListener('click', () => session.stop('推流已停止'));
   </script>
 </body>
 </html>

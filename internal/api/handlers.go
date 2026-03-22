@@ -24,6 +24,13 @@ type HTTPHandlers struct {
 	limiter map[string]*rate.Limiter // per-IP 限流器
 }
 
+type bootstrapResponse struct {
+	AuthEnabled   bool             `json:"authEnabled"`
+	RecordEnabled bool             `json:"recordEnabled"`
+	ICEServers    []map[string]any `json:"iceServers"`
+	Features      map[string]bool  `json:"features"`
+}
+
 // NewHTTPHandlers 组合房间管理器与配置，并在启用速率限制时初始化每 IP 的限流器。
 func NewHTTPHandlers(m *sfu.Manager, c *config.Config) *HTTPHandlers {
 	h := &HTTPHandlers{mgr: m, cfg: c}
@@ -51,6 +58,49 @@ func (h *HTTPHandlers) ServeRooms(w http.ResponseWriter, r *http.Request) {
 	rooms := h.mgr.ListRooms()
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(rooms)
+}
+
+// ServeBootstrap 返回浏览器页面需要的公开运行时配置。
+func (h *HTTPHandlers) ServeBootstrap(w http.ResponseWriter, r *http.Request) {
+	h.allowCORS(w, r)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !h.allowRate(r) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
+
+	cfg := h.cfg.ICEConfig()
+	iceServers := make([]map[string]any, 0, len(cfg.ICEServers))
+	for _, server := range cfg.ICEServers {
+		item := map[string]any{"urls": server.URLs}
+		if server.Username != "" {
+			item["username"] = server.Username
+		}
+		if credential, ok := server.Credential.(string); ok && credential != "" {
+			item["credential"] = credential
+		}
+		iceServers = append(iceServers, item)
+	}
+
+	resp := bootstrapResponse{
+		AuthEnabled:   h.cfg.AuthToken != "" || len(h.cfg.RoomTokens) > 0 || h.cfg.JWTSecret != "",
+		RecordEnabled: h.cfg.RecordEnabled,
+		ICEServers:    iceServers,
+		Features: map[string]bool{
+			"rooms":   true,
+			"records": true,
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // ServeWHIPPublish 处理 WHIP 推流：POST /api/whip/publish/{room}

@@ -3,54 +3,100 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Recordings</title>
-  <style>
-    body { font-family: system-ui, Segoe UI, Arial, sans-serif; margin: 24px; }
-    table { border-collapse: collapse; width: 100%; max-width: 960px; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    th { background: #f3f3f3; }
-    a { color: #0a58ca; text-decoration: none; }
-  </style>
+  <title>录制列表</title>
+  <link rel="stylesheet" href="/web/app.css" />
 </head>
 <body>
-  <h1>录制文件列表</h1>
-  <p><a href="/web/index.html">返回首页</a></p>
-  <table>
-    <thead>
-      <tr>
-        <th>文件名</th>
-        <th>大小</th>
-        <th>修改时间</th>
-        <th>下载</th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
+  <main class="page">
+    <section class="hero">
+      <div class="actions" style="justify-content:space-between;grid-template-columns:1fr auto auto;">
+        <a href="/web/index.html">← 返回首页</a>
+        <a href="/web/publisher.html"><button type="button" class="button-secondary">去推流页</button></a>
+        <a href="/web/player.html"><button type="button" class="button-secondary">去播放页</button></a>
+      </div>
+      <h1>录制文件列表</h1>
+      <p>安全渲染录制文件元数据，并提供加载态、空态和错误态。</p>
+    </section>
 
+    <section class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h2>录制记录</h2>
+          <p class="muted">默认按修改时间倒序显示，仅展示 <code>.ivf</code> 与 <code>.ogg</code> 文件。</p>
+        </div>
+        <button id="refresh" type="button" class="button-secondary">刷新列表</button>
+      </div>
+      <p id="status" class="status status--info" style="margin-top:16px;">正在加载录制列表…</p>
+      <div id="empty" class="empty-state" hidden>当前还没有录制文件。</div>
+      <div class="table-wrap" style="margin-top:16px;">
+        <table>
+          <thead>
+            <tr>
+              <th>文件名</th>
+              <th>大小</th>
+              <th>修改时间</th>
+              <th>下载</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/web/app.js"></script>
+  <script src="/web/dom.js"></script>
   <script>
-    function humanSize(n) {
-      const units = ['B','KB','MB','GB'];
-      let i = 0; let v = n;
-      while (v >= 1024 && i < units.length-1) { v/=1024; i++; }
-      return v.toFixed(1) + ' ' + units[i];
+    const { qs, fetchJSON, formatBytes, formatDate, setStatus } = window.GoLiveApp;
+    const { clear, el } = window.GoLiveDOM;
+
+    const rowsEl = qs('rows');
+    const statusEl = qs('status');
+    const emptyEl = qs('empty');
+    const refreshBtn = qs('refresh');
+
+    function renderRows(records) {
+      clear(rowsEl);
+      records.forEach((item) => {
+        const tr = el('tr');
+        tr.appendChild(el('td', { text: item.name }));
+        tr.appendChild(el('td', { text: formatBytes(item.size) }));
+        tr.appendChild(el('td', { text: formatDate(item.modTime) }));
+        tr.appendChild(el('td', {}, [
+          el('a', { text: '下载', attrs: { href: item.url, download: item.name } }),
+        ]));
+        rowsEl.appendChild(tr);
+      });
     }
-    async function load() {
-      const resp = await fetch('/api/records');
-      const data = await resp.json();
-      const tbody = document.getElementById('rows');
-      tbody.innerHTML = '';
-      for (const it of data) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${it.name}</td>
-          <td>${humanSize(it.size)}</td>
-          <td>${it.modTime}</td>
-          <td><a href="${it.url}" download>下载</a></td>
-        `;
-        tbody.appendChild(tr);
+
+    async function loadRecords() {
+      refreshBtn.disabled = true;
+      setStatus(statusEl, '正在加载录制列表…', 'info');
+      emptyEl.hidden = true;
+      clear(rowsEl);
+      try {
+        const records = await fetchJSON('/api/records');
+        const list = Array.isArray(records)
+          ? records.slice().sort((a, b) => new Date(b.modTime) - new Date(a.modTime))
+          : [];
+        if (list.length === 0) {
+          emptyEl.hidden = false;
+          setStatus(statusEl, '当前没有录制文件。', 'warn');
+          return;
+        }
+        renderRows(list);
+        setStatus(statusEl, `已加载 ${list.length} 条录制记录。`, 'success');
+      } catch (error) {
+        emptyEl.hidden = false;
+        emptyEl.textContent = `加载录制列表失败：${error.message}`;
+        setStatus(statusEl, `加载录制列表失败：${error.message}`, 'error');
+      } finally {
+        refreshBtn.disabled = false;
       }
     }
-    load();
+
+    refreshBtn.addEventListener('click', loadRecords);
+    loadRecords();
   </script>
 </body>
 </html>

@@ -3,22 +3,150 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Live WebRTC Demo</title>
-  <style>
-    body { font-family: system-ui, Segoe UI, Arial, sans-serif; margin: 24px; }
-    a { display: inline-block; margin: 8px 0; }
-  </style>
+  <title>Go Live 控制台</title>
+  <link rel="stylesheet" href="/web/app.css" />
 </head>
 <body>
-  <h1>Go WebRTC 直播 Demo</h1>
-  <p>
-    <a href="/web/publisher.html">推流页面</a>
-  </p>
-  <p>
-    <a href="/web/player.html">播放页面</a>
-  </p>
-  <p>
-    <a href="/web/records.html">录制文件列表</a>
-  </p>
+  <main class="page">
+    <section class="hero">
+      <span class="badge badge--info">Go + Pion WebRTC</span>
+      <h1>Go WebRTC 直播控制台</h1>
+      <p>统一查看房间状态、快速跳转到推流与播放页面，并查看当前运行时配置与录制能力。</p>
+    </section>
+
+    <section class="panel">
+      <h2>快速进入</h2>
+      <div class="form-grid">
+        <div class="field">
+          <label for="room">房间名</label>
+          <input id="room" value="demo" placeholder="输入房间名，例如 demo" />
+        </div>
+      </div>
+      <div class="actions" style="margin-top:16px;">
+        <a id="publish-link" href="/web/publisher.html"><button type="button">进入推流页</button></a>
+        <a id="play-link" href="/web/player.html"><button type="button" class="button-secondary">进入播放页</button></a>
+        <a href="/web/records.html"><button type="button" class="button-secondary">查看录制列表</button></a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>运行时状态</h2>
+      <p id="status" class="status status--info">正在加载运行时配置…</p>
+      <div id="meta" class="meta-list" style="margin-top:16px;"></div>
+    </section>
+
+    <section class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h2>当前房间</h2>
+          <p class="muted">来自 <code>/api/rooms</code> 的在线房间快照。</p>
+        </div>
+        <button id="refresh" type="button" class="button-secondary">刷新房间列表</button>
+      </div>
+      <div id="rooms-empty" class="empty-state" hidden>当前没有活跃房间。你可以先创建一个房间并开始推流。</div>
+      <ul id="rooms" class="room-list"></ul>
+    </section>
+  </main>
+
+  <script src="/web/app.js"></script>
+  <script src="/web/dom.js"></script>
+  <script>
+    const { qs, initRoomAndToken, getBootstrap, setStatus, fetchJSON, buildPageLink, describeBootstrap, normalizeRoom } = window.GoLiveApp;
+    const { clear, el, badge } = window.GoLiveDOM;
+
+    const roomInput = qs('room');
+    const publishLink = qs('publish-link');
+    const playLink = qs('play-link');
+    const statusEl = qs('status');
+    const metaEl = qs('meta');
+    const roomsEl = qs('rooms');
+    const roomsEmptyEl = qs('rooms-empty');
+    const refreshBtn = qs('refresh');
+
+    initRoomAndToken(roomInput, null);
+
+    function syncLinks() {
+      const room = normalizeRoom(roomInput.value);
+      publishLink.href = buildPageLink('/web/publisher.html', room);
+      playLink.href = buildPageLink('/web/player.html', room);
+    }
+
+    function renderMeta(bootstrap) {
+      clear(metaEl);
+      const items = [
+        { title: '鉴权', value: bootstrap.authEnabled ? '已启用' : '未启用' },
+        { title: '录制', value: bootstrap.recordEnabled ? '已启用' : '未启用' },
+        { title: 'ICE 服务器', value: String((bootstrap.iceServers || []).length) },
+        { title: '页面能力', value: Object.keys(bootstrap.features || {}).filter((key) => bootstrap.features[key]).join(' / ') || '无' },
+      ];
+      items.forEach((item) => {
+        metaEl.appendChild(el('div', { className: 'meta-item' }, [
+          el('strong', { text: item.title }),
+          el('span', { text: item.value }),
+        ]));
+      });
+    }
+
+    function renderRooms(rooms) {
+      clear(roomsEl);
+      roomsEmptyEl.hidden = rooms.length > 0;
+      rooms.forEach((room) => {
+        const roomName = room.Name || room.name || 'unknown';
+        const hasPublisher = Boolean(room.HasPublisher ?? room.hasPublisher);
+        const tracks = room.Tracks ?? room.tracks ?? 0;
+        const subscribers = room.Subscribers ?? room.subscribers ?? 0;
+        const item = el('li', { className: 'room-item' }, [
+          el('div', {}, [
+            el('strong', { text: roomName }),
+            el('div', { className: 'room-item__meta' }, [
+              badge(hasPublisher ? '有发布者' : '无发布者', hasPublisher ? 'success' : 'warn'),
+              badge(`轨道 ${tracks}`, 'info'),
+              badge(`观众 ${subscribers}`, 'info'),
+            ]),
+          ]),
+          el('div', { className: 'room-item__meta' }, [
+            el('a', { attrs: { href: buildPageLink('/web/publisher.html', roomName) } }, [
+              el('button', { attrs: { type: 'button' } , text: '去推流' }),
+            ]),
+            el('a', { attrs: { href: buildPageLink('/web/player.html', roomName) } }, [
+              el('button', { className: 'button-secondary', attrs: { type: 'button' }, text: '去播放' }),
+            ]),
+          ]),
+        ]);
+        roomsEl.appendChild(item);
+      });
+    }
+
+    async function loadBootstrap() {
+      try {
+        const bootstrap = await getBootstrap();
+        setStatus(statusEl, `运行时配置已加载：${describeBootstrap(bootstrap)}`, 'success');
+        renderMeta(bootstrap);
+      } catch (error) {
+        setStatus(statusEl, `加载运行时配置失败：${error.message}`, 'error');
+      }
+    }
+
+    async function loadRooms() {
+      refreshBtn.disabled = true;
+      try {
+        const rooms = await fetchJSON('/api/rooms');
+        renderRooms(Array.isArray(rooms) ? rooms : []);
+      } catch (error) {
+        roomsEmptyEl.hidden = false;
+        roomsEmptyEl.textContent = `加载房间失败：${error.message}`;
+        clear(roomsEl);
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    }
+
+    roomInput.addEventListener('input', syncLinks);
+    refreshBtn.addEventListener('click', loadRooms);
+
+    syncLinks();
+    loadBootstrap();
+    loadRooms();
+  </script>
 </body>
 </html>

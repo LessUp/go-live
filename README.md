@@ -5,16 +5,16 @@
 
 English | [简体中文](README.zh-CN.md)
 
-A lightweight live streaming service built with Go + [Pion WebRTC](https://github.com/pion/webrtc). Implements WHIP publishing, WHEP playback, embedded web pages, configurable auth, and room status queries.
+A lightweight live streaming service built with Go + [Pion WebRTC](https://github.com/pion/webrtc). Implements WHIP publishing, WHEP playback, embedded web pages, configurable auth, room status queries, and a browser bootstrap config endpoint.
 
 ## Features
 
 - **WebRTC SFU** — Minimal room relay logic via Pion, multi-viewer support
 - **WHIP / WHEP** — HTTP API compatible with modern browsers and OBS WHIP plugin
+- **Bootstrap Config** — `GET /api/bootstrap` returns browser-facing ICE/auth/feature flags
 - **Optional Auth** — Bearer token or X-Auth-Token header when `AUTH_TOKEN` is configured
 - **Room Status** — `GET /api/rooms` returns online rooms, publisher & subscriber stats
-- **Health Check** — `GET /healthz` for liveness probes
-- **Embedded Frontend** — Simple publish/play pages with room & token input
+- **Embedded Frontend** — Shared publish/play/records pages with unified UI and lifecycle handling
 - **Recording** — Optional VP8/VP9→IVF, Opus→OGG recording (`RECORD_ENABLED=1`)
 - **Prometheus Metrics** — `GET /metrics` exposes RTP bytes/packets, subscribers, rooms
 - **Containerized** — Dockerfile + docker-compose.yml with recording volume mount
@@ -28,8 +28,11 @@ go mod tidy
 go run ./cmd/server
 ```
 
+- Home console: http://localhost:8080/web/index.html
 - Publish page: http://localhost:8080/web/publisher.html
 - Play page: http://localhost:8080/web/player.html
+- Record list: http://localhost:8080/web/records.html
+- Bootstrap config: http://localhost:8080/api/bootstrap
 - Room list: http://localhost:8080/api/rooms
 - Health check: http://localhost:8080/healthz
 
@@ -39,13 +42,15 @@ go run ./cmd/server
 |--------|------|-------------|
 | `POST` | `/api/whip/publish/{room}` | SDP Offer → Answer, establish publish connection |
 | `POST` | `/api/whep/play/{room}` | SDP Offer → Answer, establish play connection |
+| `GET` | `/api/bootstrap` | Browser runtime config: ICE/auth/feature flags |
 | `GET` | `/api/rooms` | Online room list with stats |
+| `GET` | `/api/records` | Recording list metadata |
 | `GET` | `/healthz` | Health check |
 | `GET` | `/metrics` | Prometheus metrics |
 
 ## Configuration
 
-Environment variables: `ADDR`, `AUTH_TOKEN`, `STUN_SERVERS`, `TURN_SERVERS`, `RECORD_ENABLED`, `RECORD_DIR`, `CORS_ORIGINS`, `MAX_SUBSCRIBERS_PER_ROOM`.
+Environment variables: `HTTP_ADDR`, `ALLOWED_ORIGIN`, `AUTH_TOKEN`, `ROOM_TOKENS`, `STUN_URLS`, `TURN_URLS`, `TURN_USERNAME`, `TURN_PASSWORD`, `RECORD_ENABLED`, `RECORD_DIR`, `MAX_SUBS_PER_ROOM`.
 
 ## License
 

@@ -31,9 +31,10 @@ func (h *HTTPHandlers) RegisterRoutes(mux *http.ServeMux, webFS fs.FS, recordDir
 		h.ServeWHEPPlay(w, r, room)
 	})
 
-	// API：房间列表与录制文件列表（GET）
+	// API：房间列表、录制文件列表与前端运行时配置（GET）
 	mux.HandleFunc("/api/rooms", h.ServeRooms)
 	mux.HandleFunc("/api/records", h.ServeRecordsList)
+	mux.HandleFunc("/api/bootstrap", h.ServeBootstrap)
 
 	// 管理接口：关闭房间（POST /api/admin/rooms/{room}/close）
 	mux.HandleFunc("/api/admin/rooms/", func(w http.ResponseWriter, r *http.Request) {

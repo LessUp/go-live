@@ -44,8 +44,11 @@
 
 启动后访问：
 
+- 首页控制台：http://localhost:8080/web/index.html
 - 推流页：http://localhost:8080/web/publisher.html
 - 播放页：http://localhost:8080/web/player.html
+- 录制列表：http://localhost:8080/web/records.html
+- 运行时配置：http://localhost:8080/api/bootstrap
 - 房间列表：http://localhost:8080/api/rooms
 - 健康检查：http://localhost:8080/healthz
 - 指标监控：http://localhost:8080/metrics
@@ -59,6 +62,7 @@
 |------|------|------|
 | `POST` | `/api/whip/publish/{room}` | 接受 SDP Offer，返回 SDP Answer，建立推流连接 |
 | `POST` | `/api/whep/play/{room}` | 接受 SDP Offer，返回 SDP Answer，建立播放连接 |
+| `GET` | `/api/bootstrap` | 返回浏览器运行时配置（ICE、鉴权状态、功能开关） |
 | `GET` | `/api/rooms` | 返回房间列表与在线状态 |
 | `GET` | `/api/records` | 返回录制文件列表（名称/大小/时间/URL） |
 | `POST` | `/api/admin/rooms/{room}/close` | 关闭指定房间（需 `ADMIN_TOKEN` 鉴权） |
