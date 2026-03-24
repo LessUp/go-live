@@ -19,6 +19,9 @@ import (
 	"live-webrtc-go/internal/uploader"
 )
 
+var uploadRecordingFile = uploader.Upload
+var uploaderEnabled = uploader.Enabled
+
 // Room 表示一个 SFU 房间，维护发布者、订阅者与轨道 fanout。
 type Room struct {
 	name       string
@@ -88,6 +91,20 @@ func (r *Room) startPLI(remote *webrtc.TrackRemote) {
 func (r *Room) pruneIfEmpty() {
 	if r.mgr != nil {
 		r.mgr.deleteRoomIfEmpty(r)
+	}
+}
+
+func (r *Room) closeFeeds(feeds []*trackFanout) {
+	for _, feed := range feeds {
+		if path := feed.close(); path != "" && uploaderEnabled() {
+			go r.uploadRecording(path)
+		}
+	}
+}
+
+func (r *Room) closeSubscriberTracks(feeds []*trackFanout, pc *webrtc.PeerConnection) {
+	for _, feed := range feeds {
+		feed.detachFromSubscriber(pc)
 	}
 }
 
@@ -289,9 +306,7 @@ func (r *Room) closePublisher(pc *webrtc.PeerConnection) {
 	r.publisher = nil
 	r.mu.Unlock()
 
-	for _, f := range feeds {
-		f.close()
-	}
+	r.closeFeeds(feeds)
 	_ = pc.Close()
 	r.pruneIfEmpty()
 }
@@ -307,9 +322,7 @@ func (r *Room) removeSubscriber(pc *webrtc.PeerConnection) {
 		delete(r.subs, pc)
 		r.syncSubscriberMetricsLocked()
 		r.mu.Unlock()
-		for _, f := range feeds {
-			f.detachFromSubscriber(pc)
-		}
+		r.closeSubscriberTracks(feeds, pc)
 		_ = pc.Close()
 		r.pruneIfEmpty()
 		return
@@ -339,9 +352,7 @@ func (r *Room) Close() {
 	if pub != nil {
 		_ = pub.Close()
 	}
-	for _, f := range feeds {
-		f.close()
-	}
+	r.closeFeeds(feeds)
 	for _, s := range subs {
 		_ = s.Close()
 	}
@@ -350,7 +361,7 @@ func (r *Room) Close() {
 func (r *Room) uploadRecording(path string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := uploader.Upload(ctx, path); err != nil {
+	if err := uploadRecordingFile(ctx, path); err != nil {
 		log.Printf("room %s: upload failed for %s: %v", r.name, path, err)
 	}
 }

@@ -2,10 +2,26 @@ package sfu
 
 import (
 	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/pion/rtp"
+	"github.com/pion/webrtc/v3"
 	"live-webrtc-go/internal/testutil"
 )
+
+type stubRTPWriter struct {
+	closed bool
+}
+
+func (w *stubRTPWriter) WriteRTP(_ *rtp.Packet) error { return nil }
+func (w *stubRTPWriter) Close() error {
+	w.closed = true
+	return nil
+}
 
 func setupTestManager() *Manager {
 	return NewManager(testutil.TestConfig())
@@ -82,5 +98,133 @@ func TestRoomCloseClearsState(t *testing.T) {
 	stats := room.stats()
 	if stats.HasPublisher || stats.Tracks != 0 || stats.Subscribers != 0 {
 		t.Fatalf("expected empty room after close, got %+v", stats)
+	}
+}
+
+func TestClosePublisherClearsFeedsAndTriggersUpload(t *testing.T) {
+	mgr := setupTestManager()
+	room := mgr.getOrCreateRoom("test-room")
+	pub, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatalf("new peer connection: %v", err)
+	}
+	defer pub.Close()
+	room.publisher = pub
+
+	recordPath := filepath.Join(t.TempDir(), "record.ivf")
+	if err := os.WriteFile(recordPath, []byte("recording"), 0o644); err != nil {
+		t.Fatalf("write record: %v", err)
+	}
+	writer := &stubRTPWriter{}
+	feed := &trackFanout{
+		locals:  make(map[*webrtc.PeerConnection]*subscriberTrack),
+		closed:  make(chan struct{}),
+		room:    room.name,
+		rec:     writer,
+		recPath: recordPath,
+	}
+	room.trackFeeds["track"] = feed
+
+	called := make(chan string, 1)
+	prevUpload := uploadRecordingFile
+	prevEnabled := uploaderEnabled
+	uploadRecordingFile = func(_ context.Context, path string) error {
+		called <- path
+		return nil
+	}
+	uploaderEnabled = func() bool { return true }
+	defer func() {
+		uploadRecordingFile = prevUpload
+		uploaderEnabled = prevEnabled
+	}()
+
+	room.closePublisher(pub)
+
+	if room.publisher != nil {
+		t.Fatal("expected publisher to be cleared")
+	}
+	if room.trackFeedCountForTest() != 0 {
+		t.Fatalf("expected no feeds after close, got %d", room.trackFeedCountForTest())
+	}
+	if !writer.closed {
+		t.Fatal("expected recorder to be closed")
+	}
+	select {
+	case got := <-called:
+		if got != recordPath {
+			t.Fatalf("expected upload path %q, got %q", recordPath, got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected upload to be triggered")
+	}
+}
+
+func TestClosePublisherLeavesFileForFailedUpload(t *testing.T) {
+	mgr := setupTestManager()
+	room := mgr.getOrCreateRoom("test-room")
+	pub, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatalf("new peer connection: %v", err)
+	}
+	defer pub.Close()
+	room.publisher = pub
+
+	recordPath := filepath.Join(t.TempDir(), "record.ivf")
+	if err := os.WriteFile(recordPath, []byte("recording"), 0o644); err != nil {
+		t.Fatalf("write record: %v", err)
+	}
+	feed := &trackFanout{
+		locals:  make(map[*webrtc.PeerConnection]*subscriberTrack),
+		closed:  make(chan struct{}),
+		room:    room.name,
+		rec:     &stubRTPWriter{},
+		recPath: recordPath,
+	}
+	room.trackFeeds["track"] = feed
+
+	prevUpload := uploadRecordingFile
+	prevEnabled := uploaderEnabled
+	uploadRecordingFile = func(_ context.Context, path string) error {
+		return errors.New("upload failed")
+	}
+	uploaderEnabled = func() bool { return true }
+	defer func() {
+		uploadRecordingFile = prevUpload
+		uploaderEnabled = prevEnabled
+	}()
+
+	room.closePublisher(pub)
+
+	time.Sleep(50 * time.Millisecond)
+	if _, err := os.Stat(recordPath); err != nil {
+		t.Fatalf("expected local file to remain after failed upload: %v", err)
+	}
+}
+
+func TestRemoveSubscriberDetachesFeedAndUpdatesState(t *testing.T) {
+	mgr := setupTestManager()
+	room := mgr.getOrCreateRoom("test-room")
+	sub, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatalf("new peer connection: %v", err)
+	}
+	defer sub.Close()
+	room.subs[sub] = struct{}{}
+
+	feed := &trackFanout{
+		locals: make(map[*webrtc.PeerConnection]*subscriberTrack),
+		closed: make(chan struct{}),
+		room:   room.name,
+	}
+	feed.locals[sub] = &subscriberTrack{}
+	room.trackFeeds["track"] = feed
+
+	room.removeSubscriber(sub)
+
+	if room.subscriberCountForTest() != 0 {
+		t.Fatalf("expected no subscribers, got %d", room.subscriberCountForTest())
+	}
+	if len(feed.locals) != 0 {
+		t.Fatalf("expected subscriber track detached, got %d", len(feed.locals))
 	}
 }

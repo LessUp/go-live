@@ -14,12 +14,21 @@ type rtpWriter interface {
 	Close() error
 }
 
+type subscriberTrack struct {
+	sender *webrtc.RTPSender
+	local  *webrtc.TrackLocalStaticRTP
+}
+
+type subscriberBinding struct {
+	pc     *webrtc.PeerConnection
+	sender *webrtc.RTPSender
+}
+
 // trackFanout 负责把单个远端 Track 分发给多个订阅者，并可选写盘上传。
 type trackFanout struct {
-	remote *webrtc.TrackRemote
-	mu     sync.RWMutex
-	// per-subscriber local tracks
-	locals  map[*webrtc.PeerConnection]*webrtc.TrackLocalStaticRTP
+	remote  *webrtc.TrackRemote
+	mu      sync.RWMutex
+	locals  map[*webrtc.PeerConnection]*subscriberTrack
 	closed  chan struct{}
 	room    string
 	rec     rtpWriter
@@ -29,7 +38,7 @@ type trackFanout struct {
 func newTrackFanout(remote *webrtc.TrackRemote, room string) *trackFanout {
 	return &trackFanout{
 		remote: remote,
-		locals: make(map[*webrtc.PeerConnection]*webrtc.TrackLocalStaticRTP),
+		locals: make(map[*webrtc.PeerConnection]*subscriberTrack),
 		closed: make(chan struct{}),
 		room:   room,
 	}
@@ -64,37 +73,62 @@ func (f *trackFanout) attachToSubscriber(pc *webrtc.PeerConnection) {
 	}()
 
 	f.mu.Lock()
-	f.locals[pc] = local
+	f.locals[pc] = &subscriberTrack{sender: sender, local: local}
 	f.mu.Unlock()
 }
 
 func (f *trackFanout) detachFromSubscriber(pc *webrtc.PeerConnection) {
 	f.mu.Lock()
-	delete(f.locals, pc)
+	track, ok := f.locals[pc]
+	if ok {
+		delete(f.locals, pc)
+	}
 	f.mu.Unlock()
+	if ok && track.sender != nil {
+		_ = pc.RemoveTrack(track.sender)
+	}
 }
 
-// close 关闭录制文件。
-func (f *trackFanout) close() {
+func (f *trackFanout) snapshotLocals() []*webrtc.TrackLocalStaticRTP {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	locals := make([]*webrtc.TrackLocalStaticRTP, 0, len(f.locals))
+	for _, track := range f.locals {
+		locals = append(locals, track.local)
+	}
+	return locals
+}
+
+// close 关闭 fanout，移除订阅者发送轨道并返回已关闭录制文件路径。
+func (f *trackFanout) close() string {
 	select {
 	case <-f.closed:
-		return
+		return ""
 	default:
 		close(f.closed)
 	}
+
 	f.mu.Lock()
+	bindings := make([]subscriberBinding, 0, len(f.locals))
+	for pc, track := range f.locals {
+		bindings = append(bindings, subscriberBinding{pc: pc, sender: track.sender})
+	}
+	f.locals = make(map[*webrtc.PeerConnection]*subscriberTrack)
+	path := ""
 	if f.rec != nil {
+		path = f.recPath
 		_ = f.rec.Close()
 		f.rec = nil
 		f.recPath = ""
 	}
 	f.mu.Unlock()
-}
 
-func (f *trackFanout) recorderPath() string {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	return f.recPath
+	for _, binding := range bindings {
+		if binding.pc != nil && binding.sender != nil {
+			_ = binding.pc.RemoveTrack(binding.sender)
+		}
+	}
+	return path
 }
 
 // readLoop 持续从远端 Track 读取 RTP，并同步写入录制和所有订阅者。
@@ -118,16 +152,12 @@ func (f *trackFanout) readLoop() {
 		}
 		f.mu.RLock()
 		rec := f.rec
-		locals := make([]*webrtc.TrackLocalStaticRTP, 0, len(f.locals))
-		for _, local := range f.locals {
-			locals = append(locals, local)
-		}
 		f.mu.RUnlock()
+		locals := f.snapshotLocals()
 		if rec != nil {
 			_ = rec.WriteRTP(pkt)
 		}
 		for _, local := range locals {
-			// clone packet for each subscriber to avoid mutation issues
 			clone := *pkt
 			if pkt.Payload != nil {
 				clone.Payload = append([]byte(nil), pkt.Payload...)

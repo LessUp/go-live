@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -243,6 +244,12 @@ func (h *HTTPHandlers) ServeRecordsList(w http.ResponseWriter, r *http.Request) 
 			URL:     "/records/" + name,
 		})
 	}
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].ModTime == list[j].ModTime {
+			return list[i].Name < list[j].Name
+		}
+		return list[i].ModTime > list[j].ModTime
+	})
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(list)
 }
