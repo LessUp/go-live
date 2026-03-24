@@ -1,180 +1,68 @@
 # Contributing to live-webrtc-go
 
-Thank you for your interest in contributing to live-webrtc-go! This document provides guidelines and instructions for contributing to the project.
+Thank you for contributing.
 
-## Code of Conduct
+## Development setup
 
-By participating in this project, you agree to abide by our Code of Conduct. Please read it before contributing.
+```bash
+git clone https://github.com/YOUR_USERNAME/go-live.git
+cd go-live
+go mod download
+make install-tools
+```
 
-## How to Contribute
+## Recommended workflow
 
-### Reporting Issues
+1. Create a branch from `master`
+2. Make focused changes
+3. Run local verification
+4. Open a pull request
 
-1. **Search existing issues** first to avoid duplicates
-2. **Use the issue template** when creating new issues
-3. **Provide detailed information** including:
-   - Steps to reproduce the problem
-   - Expected vs actual behavior
-   - Environment details (OS, Go version, etc.)
-   - Error logs and stack traces
+## Local verification
 
-### Suggesting Features
+Use these commands before submitting changes:
 
-1. **Check existing issues** for similar feature requests
-2. **Explain the use case** and why the feature would be valuable
-3. **Consider implementation complexity** and maintenance burden
-4. **Be open to discussion** and alternative approaches
+```bash
+make fmt
+make lint
+make security
+make test
+make test-all
+make coverage
+```
 
-### Code Contributions
+Command meanings:
 
-#### Development Setup
+- `make test` → unit + integration + security tests
+- `make test-all` → adds e2e + performance suites
+- `make ci` → local CI-style verification pipeline
 
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/live-webrtc-go.git
-   cd live-webrtc-go
-   ```
+## Coding expectations
 
-3. **Install dependencies**:
-   ```bash
-   go mod download
-   ```
+- Follow normal Go idioms
+- Add tests for behavior changes
+- Update docs when config or runtime behavior changes
+- Avoid introducing stale compatibility shims or dead code
+- Keep fixes focused and minimal
 
-4. **Install development tools**:
-   ```bash
-   make install-tools
-   ```
+## Security expectations
 
-#### Making Changes
+- Never commit secrets, credentials, or tokens
+- Validate boundary inputs
+- Run `make security` for non-trivial changes
+- If you modify auth, routing, or request parsing, add tests
 
-1. **Create a feature branch**:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+## Pull requests
 
-2. **Make your changes** following our coding standards:
-   - Follow Go best practices and idioms
-   - Write comprehensive tests for new functionality
-   - Update documentation as needed
-   - Ensure all tests pass
+Please include:
 
-3. **Test your changes**:
-   ```bash
-   make test          # Run all tests
-   make lint          # Run linters
-   make security      # Run security checks
-   make coverage      # Generate coverage report
-   ```
+- a concise summary
+- why the change is needed
+- test evidence (`make test`, `make test-all`, etc.)
+- any config or docs changes
 
-4. **Commit your changes**:
-   ```bash
-   git add .
-   git commit -m "feat: add your feature description"
-   ```
+## Notes
 
-   Follow [Conventional Commits](https://www.conventionalcommits.org/) specification:
-   - `feat:` for new features
-   - `fix:` for bug fixes
-   - `docs:` for documentation changes
-   - `test:` for test additions/changes
-   - `refactor:` for code refactoring
-   - `perf:` for performance improvements
-   - `security:` for security-related changes
-
-#### Submitting Changes
-
-1. **Push to your fork**:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-2. **Create a Pull Request** on GitHub:
-   - Use the PR template
-   - Provide a clear description of changes
-   - Reference any related issues
-   - Ensure all CI checks pass
-
-3. **Address review feedback** promptly and professionally
-
-### Testing Guidelines
-
-#### Unit Tests
-
-- Write unit tests for all new functionality
-- Aim for >80% code coverage
-- Use table-driven tests where appropriate
-- Mock external dependencies
-
-#### Integration Tests
-
-- Test API endpoints and interactions
-- Verify WebRTC functionality
-- Test authentication and authorization
-- Validate error handling
-
-#### Performance Tests
-
-- Benchmark critical code paths
-- Test under load conditions
-- Monitor memory usage and leaks
-- Validate response times
-
-#### Security Tests
-
-- Test authentication bypass attempts
-- Validate input sanitization
-- Check for injection vulnerabilities
-- Verify rate limiting works
-
-### Documentation
-
-- Update README.md for new features
-- Add inline documentation for complex code
-- Update API documentation
-- Include examples where helpful
-
-### Performance Considerations
-
-- Profile code changes for performance impact
-- Optimize hot paths when necessary
-- Consider memory allocation patterns
-- Test with realistic data sizes
-
-### Security Considerations
-
-- Never commit sensitive data (tokens, keys, etc.)
-- Validate all user inputs
-- Use secure coding practices
-- Run security tests before submission
-
-## Review Process
-
-1. **Automated checks** must pass (CI/CD pipeline)
-2. **Code review** by maintainers
-3. **Testing** verification
-4. **Documentation** review
-5. **Security** assessment for sensitive changes
-
-## Release Process
-
-1. Version numbers follow [Semantic Versioning](https://semver.org/)
-2. Releases are created through GitHub releases
-3. Changelog is maintained in CHANGELOG.md
-4. Docker images are built and pushed automatically
-
-## Getting Help
-
-- **GitHub Issues**: For bugs and feature requests
-- **GitHub Discussions**: For questions and general discussion
-- **Documentation**: Check the docs/ directory
-- **Examples**: Look at test files for usage examples
-
-## Recognition
-
-Contributors are recognized in:
-- GitHub contributors page
-- Release notes for significant contributions
-- Project documentation
-
-Thank you for contributing to live-webrtc-go! 🎉
+- The primary branch is `master`
+- Go baseline is 1.22+
+- Tagged test suites live under `test/`

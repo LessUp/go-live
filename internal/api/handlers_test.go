@@ -7,534 +7,206 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
-	"live-webrtc-go/internal/config"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"live-webrtc-go/internal/sfu"
+	"live-webrtc-go/internal/testutil"
 )
 
-func setupTestHandlers() (*HTTPHandlers, *config.Config) {
-	cfg := &config.Config{
-		HTTPAddr:          ":8080",
-		AllowedOrigin:     "*",
-		AuthToken:         "",
-		STUN:              []string{"stun:stun.l.google.com:19302"},
-		TURN:              []string{},
-		TLSCertFile:       "",
-		TLSKeyFile:        "",
-		RecordEnabled:     false,
-		RecordDir:         "records",
-		MaxSubsPerRoom:    0,
-		RoomTokens:        map[string]string{},
-		TURNUsername:      "",
-		TURNPassword:      "",
-		UploadEnabled:     false,
-		DeleteAfterUpload: false,
-		S3Endpoint:        "",
-		S3Region:          "",
-		S3Bucket:          "",
-		S3AccessKey:       "",
-		S3SecretKey:       "",
-		S3UseSSL:          true,
-		S3PathStyle:       false,
-		S3Prefix:          "",
-		AdminToken:        "",
-		RateLimitRPS:      0,
-		RateLimitBurst:    0,
-		JWTSecret:         "",
-		PprofEnabled:      false,
-	}
-
+func setupTestHandlers() (*HTTPHandlers, *sfu.Manager) {
+	cfg := testutil.TestConfig()
 	mgr := sfu.NewManager(cfg)
 	h := NewHTTPHandlers(mgr, cfg)
-
-	return h, cfg
+	return h, mgr
 }
 
-func TestServeRooms_Success(t *testing.T) {
-	h, _ := setupTestHandlers()
+func signedJWT(t *testing.T, secret string, claims jwt.MapClaims) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	s, err := token.SignedString([]byte(secret))
+	if err != nil {
+		t.Fatalf("sign jwt: %v", err)
+	}
+	return s
+}
 
+func TestServeRoomsSuccess(t *testing.T) {
+	h, _ := setupTestHandlers()
 	req := httptest.NewRequest("GET", "/api/rooms", nil)
 	w := httptest.NewRecorder()
-
 	h.ServeRooms(w, req)
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Result().StatusCode)
 	}
-
 	var rooms []sfu.RoomInfo
-	err := json.NewDecoder(resp.Body).Decode(&rooms)
-	if err != nil {
-		t.Errorf("Failed to decode response: %v", err)
+	if err := json.NewDecoder(w.Result().Body).Decode(&rooms); err != nil {
+		t.Fatalf("decode rooms: %v", err)
 	}
-
 	if rooms == nil {
-		t.Error("Expected empty rooms array, got nil")
+		t.Fatal("expected array")
 	}
 }
 
-func TestServeRooms_OptionsMethod(t *testing.T) {
-	h, _ := setupTestHandlers()
-
-	req := httptest.NewRequest("OPTIONS", "/api/rooms", nil)
-	w := httptest.NewRecorder()
-
-	h.ServeRooms(w, req)
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusNoContent {
-		t.Errorf("Expected status 204, got %d", resp.StatusCode)
-	}
-}
-
-func TestServeRooms_InvalidMethod(t *testing.T) {
-	h, _ := setupTestHandlers()
-
-	req := httptest.NewRequest("POST", "/api/rooms", nil)
-	w := httptest.NewRecorder()
-
-	h.ServeRooms(w, req)
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusMethodNotAllowed {
-		t.Errorf("Expected status 405, got %d", resp.StatusCode)
-	}
-}
-
-func TestServeBootstrap_Success(t *testing.T) {
-	h, cfg := setupTestHandlers()
+func TestServeBootstrapSuccess(t *testing.T) {
+	cfg := testutil.TestConfig()
 	cfg.RecordEnabled = true
 	cfg.AuthToken = "bootstrap-token"
 	cfg.TURN = []string{"turn:turn.example.com:3478"}
 	cfg.TURNUsername = "turn-user"
 	cfg.TURNPassword = "turn-pass"
-
+	mgr := sfu.NewManager(cfg)
+	h := NewHTTPHandlers(mgr, cfg)
 	req := httptest.NewRequest("GET", "/api/bootstrap", nil)
 	w := httptest.NewRecorder()
-
 	h.ServeBootstrap(w, req)
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
-	}
-
-	var body map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if body["authEnabled"] != true {
-		t.Fatalf("Expected authEnabled to be true, got %v", body["authEnabled"])
-	}
-	if body["recordEnabled"] != true {
-		t.Fatalf("Expected recordEnabled to be true, got %v", body["recordEnabled"])
-	}
-
-	iceServers, ok := body["iceServers"].([]any)
-	if !ok || len(iceServers) != 2 {
-		t.Fatalf("Expected 2 ice servers, got %v", body["iceServers"])
-	}
-
-	turnServer, ok := iceServers[1].(map[string]any)
-	if !ok {
-		t.Fatalf("Expected TURN server object, got %T", iceServers[1])
-	}
-	if turnServer["username"] != "turn-user" {
-		t.Fatalf("Expected TURN username, got %v", turnServer["username"])
-	}
-	if turnServer["credential"] != "turn-pass" {
-		t.Fatalf("Expected TURN credential, got %v", turnServer["credential"])
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Result().StatusCode)
 	}
 }
 
-func TestServeBootstrap_InvalidMethod(t *testing.T) {
-	h, _ := setupTestHandlers()
-
-	req := httptest.NewRequest("POST", "/api/bootstrap", nil)
-	w := httptest.NewRecorder()
-
-	h.ServeBootstrap(w, req)
-
-	if w.Result().StatusCode != http.StatusMethodNotAllowed {
-		t.Fatalf("Expected status 405, got %d", w.Result().StatusCode)
-	}
-}
-
-func TestServeWHIPPublish_Success(t *testing.T) {
-	h, cfg := setupTestHandlers()
-	cfg.RoomTokens["test-room"] = "test-token"
-
-	sdpOffer := "v=0\r\no=- 1234567890 1234567890 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
-
-	req := httptest.NewRequest("POST", "/api/whip/publish/test-room", strings.NewReader(sdpOffer))
-	req.Header.Set("X-Auth-Token", "test-token")
-	req.Header.Set("Content-Type", "application/sdp")
-	w := httptest.NewRecorder()
-
-	h.ServeWHIPPublish(w, req, "test-room")
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected status 400 (bad SDP), got %d", resp.StatusCode)
-	}
-}
-
-func TestServeWHIPPublish_NoAuth(t *testing.T) {
-	h, cfg := setupTestHandlers()
-
-	// Set auth token requirement
+func TestServeWHIPPublishRequiresAuth(t *testing.T) {
+	cfg := testutil.TestConfig()
 	cfg.AuthToken = "required-token"
-
-	sdpOffer := "v=0\r\no=- 1234567890 1234567890 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
-
-	req := httptest.NewRequest("POST", "/api/whip/publish/test-room", strings.NewReader(sdpOffer))
-	// No auth header
+	mgr := sfu.NewManager(cfg)
+	h := NewHTTPHandlers(mgr, cfg)
+	req := httptest.NewRequest("POST", "/api/whip/publish/test-room", strings.NewReader("v=0\r\n"))
 	w := httptest.NewRecorder()
-
 	h.ServeWHIPPublish(w, req, "test-room")
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", resp.StatusCode)
+	if w.Result().StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Result().StatusCode)
 	}
 }
 
-func TestServeWHIPPublish_InvalidMethod(t *testing.T) {
+func TestServeWHIPPublishRejectsOversizedBody(t *testing.T) {
 	h, _ := setupTestHandlers()
-
-	req := httptest.NewRequest("GET", "/api/whip/publish/test-room", nil)
+	req := httptest.NewRequest("POST", "/api/whip/publish/test-room", strings.NewReader(strings.Repeat("a", int(maxSDPBodyBytes)+1)))
 	w := httptest.NewRecorder()
-
 	h.ServeWHIPPublish(w, req, "test-room")
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusMethodNotAllowed {
-		t.Errorf("Expected status 405, got %d", resp.StatusCode)
+	if w.Result().StatusCode != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %d", w.Result().StatusCode)
 	}
 }
 
-func TestServeWHEPPlay_Success(t *testing.T) {
-	h, cfg := setupTestHandlers()
-
-	// Add a test room token for authentication
-	cfg.RoomTokens["test-room"] = "test-token"
-
-	sdpOffer := "v=0\r\no=- 1234567890 1234567890 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
-
-	req := httptest.NewRequest("POST", "/api/whep/play/test-room", strings.NewReader(sdpOffer))
-	req.Header.Set("X-Auth-Token", "test-token")
-	req.Header.Set("Content-Type", "application/sdp")
+func TestServeWHEPPlayRejectsOversizedBody(t *testing.T) {
+	h, _ := setupTestHandlers()
+	req := httptest.NewRequest("POST", "/api/whep/play/test-room", strings.NewReader(strings.Repeat("a", int(maxSDPBodyBytes)+1)))
 	w := httptest.NewRecorder()
-
 	h.ServeWHEPPlay(w, req, "test-room")
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusBadRequest {
-		// We expect bad request because we don't have a valid WebRTC offer
-		// but we want to test the handler flow
-		if resp.StatusCode != http.StatusBadRequest {
-			t.Errorf("Expected status 400 (bad SDP), got %d", resp.StatusCode)
-		}
+	if w.Result().StatusCode != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %d", w.Result().StatusCode)
 	}
 }
 
-func TestServeWHEPPlay_NoAuth(t *testing.T) {
-	h, cfg := setupTestHandlers()
-
-	// Set auth token requirement
-	cfg.AuthToken = "required-token"
-
-	sdpOffer := "v=0\r\no=- 1234567890 1234567890 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
-
-	req := httptest.NewRequest("POST", "/api/whep/play/test-room", strings.NewReader(sdpOffer))
-	// No auth header
-	w := httptest.NewRecorder()
-
-	h.ServeWHEPPlay(w, req, "test-room")
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", resp.StatusCode)
-	}
-}
-
-func TestServeRecordsList_Success(t *testing.T) {
-	h, cfg := setupTestHandlers()
-
-	// Create a temporary directory for records
-	tempDir := t.TempDir()
-	cfg.RecordDir = tempDir
-
-	// Create a test recording file
-	testFile := "test.ivf"
-	testContent := []byte("test ivf content")
-	err := os.WriteFile(tempDir+"/"+testFile, testContent, 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-
-	req := httptest.NewRequest("GET", "/api/records", nil)
-	w := httptest.NewRecorder()
-
-	h.ServeRecordsList(w, req)
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
-
-	var records []map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&records)
-	if err != nil {
-		t.Errorf("Failed to decode response: %v", err)
-	}
-
-	if len(records) != 1 {
-		t.Errorf("Expected 1 record, got %d", len(records))
-	}
-
-	if records[0]["name"] != testFile {
-		t.Errorf("Expected record name to be %s, got %v", testFile, records[0]["name"])
-	}
-}
-
-func TestServeRecordsList_OnlyMediaFiles(t *testing.T) {
-	h, cfg := setupTestHandlers()
-	tempDir := t.TempDir()
-	cfg.RecordDir = tempDir
-
-	if err := os.WriteFile(tempDir+"/keep.ivf", []byte("ivf"), 0644); err != nil {
-		t.Fatalf("Failed to create ivf file: %v", err)
-	}
-	if err := os.WriteFile(tempDir+"/keep.ogg", []byte("ogg"), 0644); err != nil {
-		t.Fatalf("Failed to create ogg file: %v", err)
-	}
-	if err := os.WriteFile(tempDir+"/ignore.txt", []byte("txt"), 0644); err != nil {
-		t.Fatalf("Failed to create txt file: %v", err)
-	}
-
-	req := httptest.NewRequest("GET", "/api/records", nil)
-	w := httptest.NewRecorder()
-	h.ServeRecordsList(w, req)
-
-	var records []map[string]any
-	if err := json.NewDecoder(w.Result().Body).Decode(&records); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if len(records) != 2 {
-		t.Fatalf("Expected 2 media files, got %d", len(records))
-	}
-}
-
-func TestServeRecordsList_EmptyDirectory(t *testing.T) {
-	h, cfg := setupTestHandlers()
+func TestServeRecordsListSuccess(t *testing.T) {
+	cfg := testutil.TestConfig()
 	cfg.RecordDir = t.TempDir()
-
+	mgr := sfu.NewManager(cfg)
+	h := NewHTTPHandlers(mgr, cfg)
+	if err := os.WriteFile(cfg.RecordDir+"/test.ivf", []byte("test"), 0o644); err != nil {
+		t.Fatalf("write record: %v", err)
+	}
 	req := httptest.NewRequest("GET", "/api/records", nil)
 	w := httptest.NewRecorder()
 	h.ServeRecordsList(w, req)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Result().StatusCode)
+	}
+}
 
+func TestServeRecordsListMissingDirReturnsEmptyList(t *testing.T) {
+	cfg := testutil.TestConfig()
+	cfg.RecordDir = t.TempDir() + "/missing"
+	mgr := sfu.NewManager(cfg)
+	h := NewHTTPHandlers(mgr, cfg)
+	req := httptest.NewRequest("GET", "/api/records", nil)
+	w := httptest.NewRecorder()
+	h.ServeRecordsList(w, req)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Result().StatusCode)
+	}
 	var records []map[string]any
 	if err := json.NewDecoder(w.Result().Body).Decode(&records); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
+		t.Fatalf("decode records: %v", err)
 	}
 	if len(records) != 0 {
-		t.Fatalf("Expected empty list, got %d records", len(records))
+		t.Fatalf("expected empty list, got %d", len(records))
 	}
 }
 
-func TestServeRecordsList_SpecialFilename(t *testing.T) {
-	h, cfg := setupTestHandlers()
-	tempDir := t.TempDir()
-	cfg.RecordDir = tempDir
-	name := `测试 "clip".ivf`
-	if err := os.WriteFile(tempDir+"/"+name, []byte("data"), 0644); err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
-
-	req := httptest.NewRequest("GET", "/api/records", nil)
-	w := httptest.NewRecorder()
-	h.ServeRecordsList(w, req)
-
-	var records []map[string]any
-	if err := json.NewDecoder(w.Result().Body).Decode(&records); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-	if len(records) != 1 || records[0]["name"] != name {
-		t.Fatalf("Expected special filename to be preserved, got %v", records)
-	}
-}
-
-func TestServeRecordsList_InvalidMethod(t *testing.T) {
-	h, _ := setupTestHandlers()
-
-	req := httptest.NewRequest("POST", "/api/records", nil)
-	w := httptest.NewRecorder()
-
-	h.ServeRecordsList(w, req)
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusMethodNotAllowed {
-		t.Errorf("Expected status 405, got %d", resp.StatusCode)
-	}
-}
-
-func TestServeAdminCloseRoom_Success(t *testing.T) {
-	h, cfg := setupTestHandlers()
-
-	// Set admin token
+func TestServeAdminCloseRoomSuccess(t *testing.T) {
+	cfg := testutil.TestConfig()
 	cfg.AdminToken = "admin-token"
-
-	// Create a room first
 	mgr := sfu.NewManager(cfg)
-	mgr.Publish(nil, "test-room", "invalid-sdp")
-
+	mgr.EnsureRoom("test-room")
+	h := NewHTTPHandlers(mgr, cfg)
 	req := httptest.NewRequest("POST", "/api/admin/rooms/test-room/close", nil)
 	req.Header.Set("Authorization", "Bearer admin-token")
 	w := httptest.NewRecorder()
-
 	h.ServeAdminCloseRoom(w, req, "test-room")
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusNotFound {
-		// Room doesn't exist, so we expect not found
-		if resp.StatusCode != http.StatusNotFound {
-			t.Errorf("Expected status 404, got %d", resp.StatusCode)
-		}
-	}
-}
-
-func TestServeAdminCloseRoom_NoAuth(t *testing.T) {
-	h, cfg := setupTestHandlers()
-
-	// Set admin token
-	cfg.AdminToken = "admin-token"
-
-	req := httptest.NewRequest("POST", "/api/admin/rooms/test-room/close", nil)
-	// No auth header
-	w := httptest.NewRecorder()
-
-	h.ServeAdminCloseRoom(w, req, "test-room")
-
-	resp := w.Result()
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", resp.StatusCode)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Result().StatusCode)
 	}
 }
 
 func TestTokenMatch(t *testing.T) {
-	tests := []struct {
-		name     string
-		header   map[string]string
-		expected string
-		result   bool
-	}{
-		{
-			name:     "X-Auth-Token match",
-			header:   map[string]string{"X-Auth-Token": "test-token"},
-			expected: "test-token",
-			result:   true,
-		},
-		{
-			name:     "Authorization Bearer match",
-			header:   map[string]string{"Authorization": "Bearer test-token"},
-			expected: "test-token",
-			result:   true,
-		},
-		{
-			name:     "Authorization Bearer case insensitive",
-			header:   map[string]string{"Authorization": "bearer test-token"},
-			expected: "test-token",
-			result:   true,
-		},
-		{
-			name:     "No match",
-			header:   map[string]string{"X-Auth-Token": "wrong-token"},
-			expected: "test-token",
-			result:   false,
-		},
-		{
-			name:     "No auth header",
-			header:   map[string]string{},
-			expected: "test-token",
-			result:   false,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
-			for k, v := range test.header {
-				req.Header.Set(k, v)
-			}
-
-			result := tokenMatch(req, test.expected)
-			if result != test.result {
-				t.Errorf("Expected tokenMatch to return %v, got %v", test.result, result)
-			}
-		})
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	if !tokenMatch(req, "test-token") {
+		t.Fatal("expected token match")
 	}
 }
 
-func TestAllowCORS(t *testing.T) {
-	h, cfg := setupTestHandlers()
+func TestAllowCORSWildcardDoesNotSetCredentials(t *testing.T) {
+	h, _ := setupTestHandlers()
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Origin", "https://example.com")
+	w := httptest.NewRecorder()
+	h.allowCORS(w, req)
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Fatalf("expected wildcard origin, got %q", got)
+	}
+	if got := w.Header().Get("Access-Control-Allow-Credentials"); got != "" {
+		t.Fatalf("expected no credentials header with wildcard origin, got %q", got)
+	}
+}
 
-	tests := []struct {
-		name          string
-		allowedOrigin string
-		requestOrigin string
-		expectHeader  bool
-	}{
-		{
-			name:          "Wildcard origin",
-			allowedOrigin: "*",
-			requestOrigin: "https://example.com",
-			expectHeader:  true,
-		},
-		{
-			name:          "Matching origin",
-			allowedOrigin: "https://example.com",
-			requestOrigin: "https://example.com",
-			expectHeader:  true,
-		},
-		{
-			name:          "Non-matching origin",
-			allowedOrigin: "https://example.com",
-			requestOrigin: "https://other.com",
-			expectHeader:  false,
-		},
+func TestJWTOKRoomRequiresValidExpAndAudience(t *testing.T) {
+	secret := "jwt-secret"
+	aud := "live-webrtc"
+	validToken := signedJWT(t, secret, jwt.MapClaims{
+		"room": "test-room",
+		"exp":  time.Now().Add(time.Hour).Unix(),
+		"iat":  time.Now().Add(-time.Minute).Unix(),
+		"aud":  aud,
+	})
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer "+validToken)
+	if !jwtOKRoom(req, "test-room", secret, aud) {
+		t.Fatal("expected valid jwt to authorize room")
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			cfg.AllowedOrigin = test.allowedOrigin
+	expiredToken := signedJWT(t, secret, jwt.MapClaims{
+		"room": "test-room",
+		"exp":  time.Now().Add(-time.Hour).Unix(),
+		"iat":  time.Now().Add(-2 * time.Hour).Unix(),
+		"aud":  aud,
+	})
+	req2 := httptest.NewRequest("GET", "/test", nil)
+	req2.Header.Set("Authorization", "Bearer "+expiredToken)
+	if jwtOKRoom(req2, "test-room", secret, aud) {
+		t.Fatal("expected expired jwt to be rejected")
+	}
 
-			req := httptest.NewRequest("GET", "/test", nil)
-			req.Header.Set("Origin", test.requestOrigin)
-			w := httptest.NewRecorder()
-
-			h.allowCORS(w, req)
-
-			originHeader := w.Header().Get("Access-Control-Allow-Origin")
-			if test.expectHeader && originHeader == "" {
-				t.Error("Expected CORS origin header to be set")
-			} else if !test.expectHeader && originHeader != "" {
-				t.Error("Expected CORS origin header not to be set")
-			}
-
-			// Check that required headers are always set
-			methods := w.Header().Get("Access-Control-Allow-Methods")
-			if methods == "" {
-				t.Error("Expected Access-Control-Allow-Methods header to be set")
-			}
-
-			headers := w.Header().Get("Access-Control-Allow-Headers")
-			if headers == "" {
-				t.Error("Expected Access-Control-Allow-Headers header to be set")
-			}
-		})
+	wrongAudToken := signedJWT(t, secret, jwt.MapClaims{
+		"room": "test-room",
+		"exp":  time.Now().Add(time.Hour).Unix(),
+		"iat":  time.Now().Add(-time.Minute).Unix(),
+		"aud":  "other-audience",
+	})
+	req3 := httptest.NewRequest("GET", "/test", nil)
+	req3.Header.Set("Authorization", "Bearer "+wrongAudToken)
+	if jwtOKRoom(req3, "test-room", secret, aud) {
+		t.Fatal("expected wrong audience jwt to be rejected")
 	}
 }

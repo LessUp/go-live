@@ -3,10 +3,21 @@ package api
 import (
 	"io/fs"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+var roomNamePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+
+func validRoomName(room string) bool {
+	return roomNamePattern.MatchString(room)
+}
+
+func ValidRoomNameForTest(room string) bool {
+	return validRoomName(room)
+}
 
 // RegisterRoutes 将所有 HTTP 路由注册到给定的 ServeMux。
 // webFS 为内嵌的静态页面文件系统（已 Sub 到 "web" 子目录），recordDir 为录制文件目录。
@@ -14,7 +25,7 @@ func (h *HTTPHandlers) RegisterRoutes(mux *http.ServeMux, webFS fs.FS, recordDir
 	// API：WHIP 推流（POST）
 	mux.HandleFunc("/api/whip/publish/", func(w http.ResponseWriter, r *http.Request) {
 		room := strings.TrimPrefix(r.URL.Path, "/api/whip/publish/")
-		if room == "" || strings.Contains(room, "..") {
+		if !validRoomName(room) {
 			http.Error(w, "invalid room", http.StatusBadRequest)
 			return
 		}
@@ -24,7 +35,7 @@ func (h *HTTPHandlers) RegisterRoutes(mux *http.ServeMux, webFS fs.FS, recordDir
 	// API：WHEP 播放（POST）
 	mux.HandleFunc("/api/whep/play/", func(w http.ResponseWriter, r *http.Request) {
 		room := strings.TrimPrefix(r.URL.Path, "/api/whep/play/")
-		if room == "" || strings.Contains(room, "..") {
+		if !validRoomName(room) {
 			http.Error(w, "invalid room", http.StatusBadRequest)
 			return
 		}
@@ -42,7 +53,7 @@ func (h *HTTPHandlers) RegisterRoutes(mux *http.ServeMux, webFS fs.FS, recordDir
 		if strings.HasSuffix(p, "/close") {
 			room := strings.TrimSuffix(p, "/close")
 			room = strings.TrimSuffix(room, "/")
-			if room == "" || strings.Contains(room, "..") {
+			if !validRoomName(room) {
 				http.Error(w, "invalid room", http.StatusBadRequest)
 				return
 			}
@@ -61,8 +72,10 @@ func (h *HTTPHandlers) RegisterRoutes(mux *http.ServeMux, webFS fs.FS, recordDir
 	// Prometheus 指标：采集房间数量、订阅者数、RTP 字节/包等
 	mux.Handle("/metrics", promhttp.Handler())
 
-	// 录制文件静态服务：直接暴露 RECORD_DIR 下内容
-	mux.Handle("/records/", http.StripPrefix("/records/", http.FileServer(http.Dir(recordDir))))
+	// 录制文件静态服务：仅在启用录制时暴露 RECORD_DIR 下内容
+	if h.cfg.RecordEnabled {
+		mux.Handle("/records/", http.StripPrefix("/records/", http.FileServer(http.Dir(recordDir))))
+	}
 
 	// 内嵌静态页面：publisher.html / player.html 等示例
 	mux.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.FS(webFS))))

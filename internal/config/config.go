@@ -38,6 +38,7 @@ type Config struct {
 	RateLimitRPS      float64           // 每 IP 的速率限制（每秒请求数）
 	RateLimitBurst    int               // 速率限制突发值
 	JWTSecret         string            // JWT HMAC 密钥
+	JWTAudience       string            // JWT audience（可选）
 	PprofEnabled      bool              // 是否启用 pprof 调试端点
 }
 
@@ -95,6 +96,7 @@ func Load() *Config {
 		}
 	}
 	c.JWTSecret = getEnv("JWT_SECRET", "")
+	c.JWTAudience = getEnv("JWT_AUDIENCE", "")
 	c.PprofEnabled = getEnv("PPROF", "") == "1"
 	return c
 }

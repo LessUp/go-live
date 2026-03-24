@@ -21,6 +21,7 @@ import (
 )
 
 // web 目录下的静态资源打包进二进制，便于教学演示与单文件部署。
+//
 //go:embed web
 var webFS embed.FS
 
@@ -29,23 +30,32 @@ var webFS embed.FS
 // 2) 注册 HTTP 路由（WHIP/WHEP/房间/录制/管理/指标/健康检查/静态页面）
 // 3) 启动 HTTP/HTTPS 服务并实现优雅退出
 func main() {
-	// 加载配置并初始化依赖（上传器、SFU 管理器、HTTP 处理器）
 	cfg := config.Load()
-	_ = uploader.Init(cfg)
+	if err := uploader.Init(cfg); err != nil {
+		log.Fatalf("initialize uploader: %v", err)
+	}
 	mgr := sfu.NewManager(cfg)
 	h := api.NewHTTPHandlers(mgr, cfg)
 
-	// 注册所有路由
 	mux := http.NewServeMux()
-	staticFS, _ := fs.Sub(webFS, "web")
+	staticFS, err := fs.Sub(webFS, "web")
+	if err != nil {
+		log.Fatalf("load embedded web assets: %v", err)
+	}
 	h.RegisterRoutes(mux, staticFS, cfg.RecordDir)
 
-	// 启动服务：根据是否配置证书选择 HTTP 或 HTTPS
 	addr := cfg.HTTPAddr
 	fmt.Printf("Live WebRTC server listening on %s\n", addr)
-	fmt.Println("Open http://localhost:8080/web/publisher.html and http://localhost:8080/web/player.html")
+	fmt.Printf("Open http://localhost%s/web/publisher.html and http://localhost%s/web/player.html\n", addr, addr)
 
-	srv := &http.Server{Addr: addr, Handler: mux}
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	go func() {
 		var err error
 		if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
@@ -58,7 +68,6 @@ func main() {
 		}
 	}()
 
-	// 优雅退出：捕获中断信号，优雅关闭 HTTP 并清理房间连接
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop

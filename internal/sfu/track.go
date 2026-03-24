@@ -1,13 +1,11 @@
 package sfu
 
 import (
-	"context"
 	"sync"
 
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v3"
 	"live-webrtc-go/internal/metrics"
-	"live-webrtc-go/internal/uploader"
 )
 
 // rtpWriter 抽象录制写入器接口。
@@ -76,7 +74,7 @@ func (f *trackFanout) detachFromSubscriber(pc *webrtc.PeerConnection) {
 	f.mu.Unlock()
 }
 
-// close 关闭录制文件并触发异步上传。
+// close 关闭录制文件。
 func (f *trackFanout) close() {
 	select {
 	case <-f.closed:
@@ -87,13 +85,16 @@ func (f *trackFanout) close() {
 	f.mu.Lock()
 	if f.rec != nil {
 		_ = f.rec.Close()
-		if f.recPath != "" {
-			go func(p string) { _ = uploader.Upload(context.Background(), p) }(f.recPath)
-		}
 		f.rec = nil
 		f.recPath = ""
 	}
 	f.mu.Unlock()
+}
+
+func (f *trackFanout) recorderPath() string {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.recPath
 }
 
 // readLoop 持续从远端 Track 读取 RTP，并同步写入录制和所有订阅者。
@@ -117,12 +118,15 @@ func (f *trackFanout) readLoop() {
 		}
 		f.mu.RLock()
 		rec := f.rec
+		locals := make([]*webrtc.TrackLocalStaticRTP, 0, len(f.locals))
+		for _, local := range f.locals {
+			locals = append(locals, local)
+		}
 		f.mu.RUnlock()
 		if rec != nil {
 			_ = rec.WriteRTP(pkt)
 		}
-		f.mu.RLock()
-		for _, local := range f.locals {
+		for _, local := range locals {
 			// clone packet for each subscriber to avoid mutation issues
 			clone := *pkt
 			if pkt.Payload != nil {
@@ -130,6 +134,5 @@ func (f *trackFanout) readLoop() {
 			}
 			_ = local.WriteRTP(&clone)
 		}
-		f.mu.RUnlock()
 	}
 }

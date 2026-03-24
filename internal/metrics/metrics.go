@@ -12,10 +12,10 @@ import (
 )
 
 var (
-    RTPBytes = promauto.NewCounterVec(prometheus.CounterOpts{
-        Name: "webrtc_rtp_bytes_total",
-        Help: "Total RTP bytes received by room",
-    }, []string{"room"})
+	RTPBytes = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "webrtc_rtp_bytes_total",
+		Help: "Total RTP bytes received by room",
+	}, []string{"room"})
 
 	RTPPackets = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "webrtc_rtp_packets_total",
@@ -27,14 +27,15 @@ var (
 		Help: "Current subscribers per room",
 	}, []string{"room"})
 
-    Rooms = promauto.NewGauge(prometheus.GaugeOpts{
-        Name: "webrtc_rooms",
-        Help: "Current rooms managed",
-    })
+	Rooms = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "webrtc_rooms",
+		Help: "Current rooms managed",
+	})
 )
 
-func SetRooms(n float64)          { Rooms.Set(n) }
-func IncSubscribers(room string)  { Subscribers.WithLabelValues(room).Inc() }
-func DecSubscribers(room string)  { Subscribers.WithLabelValues(room).Dec() }
-func AddBytes(room string, n int) { RTPBytes.WithLabelValues(room).Add(float64(n)) }
-func IncPackets(room string)      { RTPPackets.WithLabelValues(room).Inc() }
+func SetRooms(n float64)                { Rooms.Set(n) }
+func SetSubscribers(room string, n int) { Subscribers.WithLabelValues(room).Set(float64(n)) }
+func IncSubscribers(room string)        { Subscribers.WithLabelValues(room).Inc() }
+func DecSubscribers(room string)        { Subscribers.WithLabelValues(room).Dec() }
+func AddBytes(room string, n int)       { RTPBytes.WithLabelValues(room).Add(float64(n)) }
+func IncPackets(room string)            { RTPPackets.WithLabelValues(room).Inc() }

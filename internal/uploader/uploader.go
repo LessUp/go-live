@@ -17,8 +17,8 @@ import (
 )
 
 var (
-    client *minio.Client
-    cfg    *config.Config
+	client *minio.Client
+	cfg    *config.Config
 )
 
 // Init 根据配置初始化 MinIO/S3 客户端。

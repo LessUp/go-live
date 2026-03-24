@@ -3,6 +3,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -15,6 +16,8 @@ import (
 	"live-webrtc-go/internal/config"
 	"live-webrtc-go/internal/sfu"
 )
+
+const maxSDPBodyBytes int64 = 1 << 20
 
 // HTTPHandlers 聚合了房间管理器与配置，负责对外暴露 WHIP/WHEP/管理等 API。
 type HTTPHandlers struct {
@@ -38,6 +41,22 @@ func NewHTTPHandlers(m *sfu.Manager, c *config.Config) *HTTPHandlers {
 		h.limiter = make(map[string]*rate.Limiter)
 	}
 	return h
+}
+
+func (h *HTTPHandlers) readSDPBody(w http.ResponseWriter, r *http.Request) (string, bool) {
+	defer r.Body.Close()
+	limited := http.MaxBytesReader(w, r.Body, maxSDPBodyBytes)
+	body, err := io.ReadAll(limited)
+	if err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+			return "", false
+		}
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return "", false
+	}
+	return string(body), true
 }
 
 // ServeRooms handles GET /api/rooms
@@ -123,9 +142,11 @@ func (h *HTTPHandlers) ServeWHIPPublish(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	defer r.Body.Close()
-	offerSDP, _ := io.ReadAll(r.Body)
-	answer, err := h.mgr.Publish(r.Context(), room, string(offerSDP))
+	offerSDP, ok := h.readSDPBody(w, r)
+	if !ok {
+		return
+	}
+	answer, err := h.mgr.Publish(r.Context(), room, offerSDP)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -155,9 +176,11 @@ func (h *HTTPHandlers) ServeWHEPPlay(w http.ResponseWriter, r *http.Request, roo
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	defer r.Body.Close()
-	offerSDP, _ := io.ReadAll(r.Body)
-	answer, err := h.mgr.Subscribe(r.Context(), room, string(offerSDP))
+	offerSDP, ok := h.readSDPBody(w, r)
+	if !ok {
+		return
+	}
+	answer, err := h.mgr.Subscribe(r.Context(), room, offerSDP)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -169,7 +192,6 @@ func (h *HTTPHandlers) ServeWHEPPlay(w http.ResponseWriter, r *http.Request, roo
 
 // ServeRecordsList 列出 RECORD_DIR 下的 ivf/ogg 文件并返回元数据。
 func (h *HTTPHandlers) ServeRecordsList(w http.ResponseWriter, r *http.Request) {
-	// 查询本地录制目录，将 IVF/OGG 文件以 JSON 返回
 	h.allowCORS(w, r)
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
@@ -186,6 +208,11 @@ func (h *HTTPHandlers) ServeRecordsList(w http.ResponseWriter, r *http.Request) 
 	dir := h.cfg.RecordDir
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode([]any{})
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

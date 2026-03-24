@@ -9,47 +9,44 @@ title: 使用指南
 
 ## 前置要求
 
-- Go 1.21 及以上，`go` 命令需在 `PATH` 中。
-- （可选）Docker / Docker Compose，用于容器化部署。
-- 浏览器需支持 WebRTC，并允许访问摄像头/麦克风。
+- Go 1.22 及以上
+- （可选）Docker / Docker Compose
+- 浏览器支持 WebRTC，并允许访问摄像头/麦克风
 
 ## 本地开发
 
-### 方式一：使用启动脚本（推荐）
+### 方式一：使用启动脚本
 
 ```bash
-# 进入仓库根目录
 ./scripts/start.sh
 ```
 
-脚本特点：
+脚本会：
 
-- 自动创建 `records`、`.gocache`、`.gomodcache` 目录，并把 `GOCACHE`/`GOMODCACHE` 指向仓库内，避免污染全局。
-- 默认执行 `go mod tidy`（通过 `SKIP_TIDY=1 ./scripts/start.sh` 可跳过）。
-- 支持在 `.env.local` 中定义环境变量，例如：
+- 创建 `records`、`.gocache`、`.gomodcache`
+- 把 `GOCACHE` / `GOMODCACHE` 指向仓库目录内
+- 加载 `.env.local`（如果存在）
 
-```bash
-# .env.local 示例
-HTTP_ADDR=:9090
-ALLOWED_ORIGIN=https://example.com
-AUTH_TOKEN=demo-token
-```
-
-### 方式二：手动执行
+如需在启动前执行 `go mod tidy`：
 
 ```bash
-GOCACHE=$(pwd)/.gocache GO111MODULE=on go run ./cmd/server
+RUN_TIDY=1 ./scripts/start.sh
 ```
 
-若首次拉取代码，需要先运行 `go mod tidy` 以安装依赖。
+### 方式二：手动运行
 
-服务启动后可访问：
+```bash
+go run ./cmd/server
+```
+
+启动后常用地址：
 
 - 推流：`http://localhost:8080/web/publisher.html`
 - 播放：`http://localhost:8080/web/player.html`
 - 房间列表：`http://localhost:8080/api/rooms`
-- 录制文件：`http://localhost:8080/api/records`
+- 录制列表：`http://localhost:8080/api/records`
 - 指标：`http://localhost:8080/metrics`
+- 健康检查：`http://localhost:8080/healthz`
 
 ## Docker / Compose
 
@@ -69,52 +66,54 @@ docker run --rm -p 8080:8080 \
   live-webrtc-go:latest
 ```
 
-### 使用 docker-compose
+### 使用 docker compose
 
 ```bash
 docker compose up -d
 ```
 
-`docker-compose.yml` 已包含 TURN 示例配置，可按需开启。
-
 ## 常用环境变量
 
 | 变量 | 作用 |
 |------|------|
-| `HTTP_ADDR` | HTTP 监听地址，默认 `:8080`。 |
-| `ALLOWED_ORIGIN` | CORS 白名单，生产建议填具体域名。 |
-| `AUTH_TOKEN` / `ROOM_TOKENS` | 推流/拉流鉴权，支持房间级覆盖。 |
-| `JWT_SECRET` | 启用 JWT 鉴权，`room` 字段限制房间，`role=admin` 访问管理接口。 |
-| `RECORD_ENABLED` / `RECORD_DIR` | 控制录制与输出目录。 |
-| `UPLOAD_RECORDINGS` 及 S3 相关变量 | 开启录制上传和对象存储参数。 |
-| `MAX_SUBS_PER_ROOM` | 每个房间的订阅者上限。 |
-| `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST` | HTTP 接口限流阈值。 |
-| `ADMIN_TOKEN` | 调用 `/api/admin/rooms/{room}/close` 的管理 Token。 |
-
-更多变量可参考根目录 `README.md` 的完整表格。
+| `HTTP_ADDR` | HTTP 监听地址，默认 `:8080` |
+| `ALLOWED_ORIGIN` | CORS 白名单 |
+| `AUTH_TOKEN` / `ROOM_TOKENS` | 全局 / 房间级鉴权 |
+| `JWT_SECRET` / `JWT_AUDIENCE` | JWT 鉴权与 audience 校验 |
+| `RECORD_ENABLED` / `RECORD_DIR` | 控制录制与输出目录 |
+| `UPLOAD_RECORDINGS` 及 S3 相关变量 | 启用录制上传 |
+| `MAX_SUBS_PER_ROOM` | 每房间订阅者上限 |
+| `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST` | HTTP 限流阈值 |
+| `ADMIN_TOKEN` | 管理接口 Token |
 
 ## API 示例
 
 ```bash
-# WHIP 推流（示意，通常由浏览器/OBS 完成）
 curl -X POST "http://localhost:8080/api/whip/publish/demo" \
   -H "Content-Type: application/sdp" \
   --data-binary @offer.sdp
 
-# 获取房间列表
 curl http://localhost:8080/api/rooms | jq
 
-# 关闭房间
 curl -X POST \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   http://localhost:8080/api/admin/rooms/demo/close
 ```
 
+## 验证命令
+
+```bash
+make test
+make test-all
+make ci
+```
+
 ## 常见问题
 
-- **提示 `publisher already exists`**：同一房间默认仅允许一个发布者，请确保旧连接已关闭，或调用管理接口关闭房间。
-- **浏览器无法建立连接**：检查浏览器是否使用 HTTPS 环境；若在公网/对称 NAT，需要配置 TURN 服务器并更新 `TURN_URLS`、`TURN_USERNAME`、`TURN_PASSWORD`。
-- **录制文件缺失**：确认 `RECORD_ENABLED=1` 且进程对 `RECORD_DIR` 拥有写权限；若启用上传并打开 `DELETE_RECORDING_AFTER_UPLOAD=1`，文件会在成功上传后被删除，可通过对象存储验证。
-- **限流误伤**：`RATE_LIMIT_RPS=0` 可关闭限流；调大 `RATE_LIMIT_BURST` 可容忍短时间抖动。
+- **提示 `publisher already exists`**：同一房间只允许一个发布者
+- **浏览器无法建立连接**：检查 HTTPS / TURN 配置
+- **录制文件缺失**：确认 `RECORD_ENABLED=1` 且进程对 `RECORD_DIR` 有写权限
+- **`/api/records` 返回空数组**：如果录制目录还不存在，这是预期行为
+- **限流误伤**：可将 `RATE_LIMIT_RPS=0` 关闭限流，或调大 `RATE_LIMIT_BURST`
 
-如需更深入的背景，可阅读 `docs/design.md`。
+如需更深入背景，可继续阅读 `docs/design.md`。

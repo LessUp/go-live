@@ -1,18 +1,28 @@
 package api
 
 import (
+	"crypto/subtle"
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"golang.org/x/time/rate"
 )
 
+type roomClaims struct {
+	Room  string `json:"room,omitempty"`
+	Role  string `json:"role,omitempty"`
+	Admin any    `json:"admin,omitempty"`
+	jwt.RegisteredClaims
+}
+
 // allowCORS 设置基础跨域响应头，适配示例页面与教学演示。
 func (h *HTTPHandlers) allowCORS(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 	ao := h.cfg.AllowedOrigin
+	allowCredentials := ao != "*"
 	if ao == "*" {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 	} else if origin != "" && (ao == origin || hostMatch(ao, origin)) {
@@ -21,7 +31,9 @@ func (h *HTTPHandlers) allowCORS(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Auth-Token")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	if allowCredentials {
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+	}
 }
 
 // allowRate 根据请求 IP 进行限流，避免单个客户端耗尽资源。
@@ -50,13 +62,11 @@ func (h *HTTPHandlers) allowRate(r *http.Request) bool {
 // authOKRoom 校验访问权限：优先房间级 Token，再回退到全局 Token 或 JWT；
 // JWT 可包含 room 声明以限制访问到指定房间。
 func (h *HTTPHandlers) authOKRoom(r *http.Request, room string) bool {
-	// 优先匹配房间级 Token，再回退到全局 Token 或 JWT。
-	// room-specific token overrides global config if set
 	if tok, ok := h.cfg.RoomTokens[room]; ok && tok != "" {
 		if tokenMatch(r, tok) {
 			return true
 		}
-		if h.cfg.JWTSecret != "" && jwtOKRoom(r, room, h.cfg.JWTSecret) {
+		if h.cfg.JWTSecret != "" && jwtOKRoom(r, room, h.cfg.JWTSecret, h.cfg.JWTAudience) {
 			return true
 		}
 		return false
@@ -65,16 +75,13 @@ func (h *HTTPHandlers) authOKRoom(r *http.Request, room string) bool {
 		if tokenMatch(r, h.cfg.AuthToken) {
 			return true
 		}
-		if h.cfg.JWTSecret != "" && jwtOKRoom(r, room, h.cfg.JWTSecret) {
+		if h.cfg.JWTSecret != "" && jwtOKRoom(r, room, h.cfg.JWTSecret, h.cfg.JWTAudience) {
 			return true
 		}
 		return false
 	}
 	if h.cfg.JWTSecret != "" {
-		if jwtOKRoom(r, room, h.cfg.JWTSecret) {
-			return true
-		}
-		return false
+		return jwtOKRoom(r, room, h.cfg.JWTSecret, h.cfg.JWTAudience)
 	}
 	return true
 }
@@ -84,7 +91,7 @@ func (h *HTTPHandlers) adminOK(r *http.Request) bool {
 	if h.cfg.AdminToken != "" && tokenMatch(r, h.cfg.AdminToken) {
 		return true
 	}
-	if h.cfg.JWTSecret != "" && jwtAdmin(r, h.cfg.JWTSecret) {
+	if h.cfg.JWTSecret != "" && jwtAdmin(r, h.cfg.JWTSecret, h.cfg.JWTAudience) {
 		return true
 	}
 	return false
@@ -93,70 +100,78 @@ func (h *HTTPHandlers) adminOK(r *http.Request) bool {
 // tokenMatch 从 X-Auth-Token 或 Authorization: Bearer 中读取并比对令牌。
 func tokenMatch(r *http.Request, expect string) bool {
 	if t := r.Header.Get("X-Auth-Token"); t != "" {
-		return t == expect
+		return subtle.ConstantTimeCompare([]byte(t), []byte(expect)) == 1
 	}
 	auth := r.Header.Get("Authorization")
 	if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
-		return strings.TrimSpace(auth[7:]) == expect
+		return subtle.ConstantTimeCompare([]byte(strings.TrimSpace(auth[7:])), []byte(expect)) == 1
 	}
 	return false
 }
 
-// jwtOKRoom 验证 HMAC JWT 并（可选）校验 claims.room 与目标房间一致。
-// 为简化演示，不强制验证 exp/iat/aud。
-func jwtOKRoom(r *http.Request, room, secret string) bool {
+func parseRoomClaims(tokenString, secret string, audience string) (*roomClaims, bool) {
+	claims := &roomClaims{}
+	parser := jwt.NewParser(
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg(), jwt.SigningMethodHS384.Alg(), jwt.SigningMethodHS512.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithLeeway(30*time.Second),
+	)
+	if audience != "" {
+		parser = jwt.NewParser(
+			jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg(), jwt.SigningMethodHS384.Alg(), jwt.SigningMethodHS512.Alg()}),
+			jwt.WithExpirationRequired(),
+			jwt.WithIssuedAt(),
+			jwt.WithAudience(audience),
+			jwt.WithLeeway(30*time.Second),
+		)
+	}
+	token, err := parser.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, false
+	}
+	return claims, true
+}
+
+// jwtOKRoom 验证 HMAC JWT 并校验标准 claims，且（可选）校验 claims.room 与目标房间一致。
+func jwtOKRoom(r *http.Request, room, secret, audience string) bool {
 	auth := r.Header.Get("Authorization")
 	if !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
 		return false
 	}
-	tokenString := strings.TrimSpace(auth[7:])
-	parsed, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, jwt.ErrInvalidKeyType
-		}
-		return []byte(secret), nil
-	})
-	if err != nil || !parsed.Valid {
+	claims, ok := parseRoomClaims(strings.TrimSpace(auth[7:]), secret, audience)
+	if !ok {
 		return false
 	}
-	if claims, ok := parsed.Claims.(jwt.MapClaims); ok {
-		if v, ok := claims["room"].(string); ok && v != "" && v != room {
-			return false
-		}
+	if claims.Room != "" && claims.Room != room {
+		return false
 	}
 	return true
 }
 
 // jwtAdmin 验证 HMAC JWT 并判断是否具备管理员权限（role=admin 或 admin=true/1）。
-func jwtAdmin(r *http.Request, secret string) bool {
+func jwtAdmin(r *http.Request, secret, audience string) bool {
 	auth := r.Header.Get("Authorization")
 	if !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
 		return false
 	}
-	tokenString := strings.TrimSpace(auth[7:])
-	parsed, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, jwt.ErrInvalidKeyType
-		}
-		return []byte(secret), nil
-	})
-	if err != nil || !parsed.Valid {
-		return false
-	}
-	claims, ok := parsed.Claims.(jwt.MapClaims)
+	claims, ok := parseRoomClaims(strings.TrimSpace(auth[7:]), secret, audience)
 	if !ok {
 		return false
 	}
-	if role, ok := claims["role"].(string); ok && strings.EqualFold(role, "admin") {
+	if strings.EqualFold(claims.Role, "admin") {
 		return true
 	}
-	if adminBool, ok := claims["admin"].(bool); ok && adminBool {
-		return true
+	switch v := claims.Admin.(type) {
+	case bool:
+		return v
+	case float64:
+		return v == 1
+	default:
+		return false
 	}
-	if adminNum, ok := claims["admin"].(float64); ok && adminNum == 1 {
-		return true
-	}
-	return false
 }
 
 // hostMatch 简单比对来源主机名是否与配置相符。

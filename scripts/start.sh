@@ -24,8 +24,8 @@ GO_BIN="${GO_BIN:-go}"
 
 echo "[start] 使用 HTTP_ADDR=${HTTP_ADDR} RECORD_DIR=${RECORD_DIR}"
 
-if [[ "${SKIP_TIDY:-0}" != "1" ]]; then
-  echo "[start] 运行 go mod tidy（设置 SKIP_TIDY=1 可跳过）"
+if [[ "${RUN_TIDY:-0}" == "1" ]]; then
+  echo "[start] 运行 go mod tidy"
   "${GO_BIN}" mod tidy
 fi
 

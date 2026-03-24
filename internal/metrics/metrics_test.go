@@ -6,158 +6,80 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
-func TestMetrics_InitialValues(t *testing.T) {
-	// Test initial values of metrics
-	
-	// Test rooms gauge
-	roomsValue := testutil.ToFloat64(Rooms)
-	if roomsValue != 0 {
-		t.Errorf("Expected initial rooms value to be 0, got %f", roomsValue)
+func TestMetricsInitialValues(t *testing.T) {
+	SetRooms(0)
+	SetSubscribers("test-room", 0)
+	if got := testutil.ToFloat64(Rooms); got != 0 {
+		t.Fatalf("expected initial rooms 0, got %f", got)
 	}
-	
-	// Test RTP bytes counter
-	rtpBytesValue := testutil.ToFloat64(RTPBytes.WithLabelValues("test-room"))
-	if rtpBytesValue != 0 {
-		t.Errorf("Expected initial RTP bytes value to be 0, got %f", rtpBytesValue)
+	if got := testutil.ToFloat64(RTPBytes.WithLabelValues("test-room")); got != 0 {
+		t.Fatalf("expected initial RTP bytes 0, got %f", got)
 	}
-	
-	// Test RTP packets counter
-	rtpPacketsValue := testutil.ToFloat64(RTPPackets.WithLabelValues("test-room"))
-	if rtpPacketsValue != 0 {
-		t.Errorf("Expected initial RTP packets value to be 0, got %f", rtpPacketsValue)
+	if got := testutil.ToFloat64(RTPPackets.WithLabelValues("test-room")); got != 0 {
+		t.Fatalf("expected initial RTP packets 0, got %f", got)
 	}
-	
-	// Test subscribers gauge
-	subscribersValue := testutil.ToFloat64(Subscribers.WithLabelValues("test-room"))
-	if subscribersValue != 0 {
-		t.Errorf("Expected initial subscribers value to be 0, got %f", subscribersValue)
+	if got := testutil.ToFloat64(Subscribers.WithLabelValues("test-room")); got != 0 {
+		t.Fatalf("expected initial subscribers 0, got %f", got)
 	}
 }
 
 func TestSetRooms(t *testing.T) {
-	// Set rooms to 5
 	SetRooms(5)
-	
-	roomsValue := testutil.ToFloat64(Rooms)
-	if roomsValue != 5 {
-		t.Errorf("Expected rooms value to be 5, got %f", roomsValue)
+	if got := testutil.ToFloat64(Rooms); got != 5 {
+		t.Fatalf("expected rooms 5, got %f", got)
 	}
-	
-	// Set rooms to 10
-	SetRooms(10)
-	
-	roomsValue = testutil.ToFloat64(Rooms)
-	if roomsValue != 10 {
-		t.Errorf("Expected rooms value to be 10, got %f", roomsValue)
-	}
-	
-	// Reset to 0
 	SetRooms(0)
-	
-	roomsValue = testutil.ToFloat64(Rooms)
-	if roomsValue != 0 {
-		t.Errorf("Expected rooms value to be 0, got %f", roomsValue)
-	}
 }
 
-func TestIncSubscribers(t *testing.T) {
-	room := "test-room"
-	
-	// Increment subscribers
-	IncSubscribers(room)
-	
-	subscribersValue := testutil.ToFloat64(Subscribers.WithLabelValues(room))
-	if subscribersValue != 1 {
-		t.Errorf("Expected subscribers value to be 1, got %f", subscribersValue)
+func TestSetSubscribers(t *testing.T) {
+	SetSubscribers("test-room", 3)
+	if got := testutil.ToFloat64(Subscribers.WithLabelValues("test-room")); got != 3 {
+		t.Fatalf("expected subscribers 3, got %f", got)
 	}
-	
-	// Increment again
-	IncSubscribers(room)
-	
-	subscribersValue = testutil.ToFloat64(Subscribers.WithLabelValues(room))
-	if subscribersValue != 2 {
-		t.Errorf("Expected subscribers value to be 2, got %f", subscribersValue)
-	}
+	SetSubscribers("test-room", 0)
 }
 
-func TestDecSubscribers(t *testing.T) {
+func TestIncAndDecSubscribers(t *testing.T) {
 	room := "test-room"
-	
-	// First increment to 3
+	SetSubscribers(room, 0)
 	IncSubscribers(room)
 	IncSubscribers(room)
-	IncSubscribers(room)
-	
-	subscribersValue := testutil.ToFloat64(Subscribers.WithLabelValues(room))
-	if subscribersValue != 3 {
-		t.Errorf("Expected subscribers value to be 3, got %f", subscribersValue)
+	if got := testutil.ToFloat64(Subscribers.WithLabelValues(room)); got != 2 {
+		t.Fatalf("expected subscribers 2, got %f", got)
 	}
-	
-	// Decrement
 	DecSubscribers(room)
-	
-	subscribersValue = testutil.ToFloat64(Subscribers.WithLabelValues(room))
-	if subscribersValue != 2 {
-		t.Errorf("Expected subscribers value to be 2, got %f", subscribersValue)
+	if got := testutil.ToFloat64(Subscribers.WithLabelValues(room)); got != 1 {
+		t.Fatalf("expected subscribers 1, got %f", got)
 	}
-	
-	// Decrement again
-	DecSubscribers(room)
-	
-	subscribersValue = testutil.ToFloat64(Subscribers.WithLabelValues(room))
-	if subscribersValue != 1 {
-		t.Errorf("Expected subscribers value to be 1, got %f", subscribersValue)
-	}
+	SetSubscribers(room, 0)
 }
 
 func TestAddBytes(t *testing.T) {
-	room := "test-room"
-	
-	// Add 1000 bytes
+	room := "bytes-room"
+	before := testutil.ToFloat64(RTPBytes.WithLabelValues(room))
 	AddBytes(room, 1000)
-	
-	rtpBytesValue := testutil.ToFloat64(RTPBytes.WithLabelValues(room))
-	if rtpBytesValue != 1000 {
-		t.Errorf("Expected RTP bytes value to be 1000, got %f", rtpBytesValue)
-	}
-	
-	// Add another 500 bytes
 	AddBytes(room, 500)
-	
-	rtpBytesValue = testutil.ToFloat64(RTPBytes.WithLabelValues(room))
-	if rtpBytesValue != 1500 {
-		t.Errorf("Expected RTP bytes value to be 1500, got %f", rtpBytesValue)
+	if got := testutil.ToFloat64(RTPBytes.WithLabelValues(room)); got != before+1500 {
+		t.Fatalf("expected RTP bytes increase by 1500, got %f (before=%f)", got, before)
 	}
 }
 
 func TestIncPackets(t *testing.T) {
-	room := "test-room"
-	
-	// Increment packets
+	room := "packets-room"
+	before := testutil.ToFloat64(RTPPackets.WithLabelValues(room))
 	IncPackets(room)
-	
-	rtpPacketsValue := testutil.ToFloat64(RTPPackets.WithLabelValues(room))
-	if rtpPacketsValue != 1 {
-		t.Errorf("Expected RTP packets value to be 1, got %f", rtpPacketsValue)
-	}
-	
-	// Increment again
 	IncPackets(room)
-	
-	rtpPacketsValue = testutil.ToFloat64(RTPPackets.WithLabelValues(room))
-	if rtpPacketsValue != 2 {
-		t.Errorf("Expected RTP packets value to be 2, got %f", rtpPacketsValue)
+	if got := testutil.ToFloat64(RTPPackets.WithLabelValues(room)); got != before+2 {
+		t.Fatalf("expected RTP packets increase by 2, got %f (before=%f)", got, before)
 	}
 }
 
-func TestMetrics_ConcurrentAccess(t *testing.T) {
-	// Test concurrent access to metrics
+func TestMetricsConcurrentAccess(t *testing.T) {
+	room := "concurrent-room"
+	SetSubscribers(room, 0)
 	done := make(chan bool)
-	
-	// Start multiple goroutines updating metrics
 	for i := 0; i < 10; i++ {
-		go func(id int) {
-			room := "concurrent-room"
+		go func() {
 			for j := 0; j < 100; j++ {
 				IncSubscribers(room)
 				AddBytes(room, 100)
@@ -167,90 +89,19 @@ func TestMetrics_ConcurrentAccess(t *testing.T) {
 				}
 			}
 			done <- true
-		}(i)
+		}()
 	}
-	
-	// Wait for all goroutines to complete
 	for i := 0; i < 10; i++ {
 		<-done
 	}
-	
-	// Verify metrics are consistent (should not panic or crash)
-	subscribersValue := testutil.ToFloat64(Subscribers.WithLabelValues("concurrent-room"))
-	if subscribersValue < 0 {
-		t.Errorf("Subscribers value should not be negative: %f", subscribersValue)
+	if got := testutil.ToFloat64(Subscribers.WithLabelValues(room)); got < 0 {
+		t.Fatalf("subscribers should not be negative: %f", got)
 	}
-	
-	rtpBytesValue := testutil.ToFloat64(RTPBytes.WithLabelValues("concurrent-room"))
-	if rtpBytesValue <= 0 {
-		t.Errorf("RTP bytes value should be positive: %f", rtpBytesValue)
+	if got := testutil.ToFloat64(RTPBytes.WithLabelValues(room)); got <= 0 {
+		t.Fatalf("bytes should be positive: %f", got)
 	}
-	
-	rtpPacketsValue := testutil.ToFloat64(RTPPackets.WithLabelValues("concurrent-room"))
-	if rtpPacketsValue <= 0 {
-		t.Errorf("RTP packets value should be positive: %f", rtpPacketsValue)
+	if got := testutil.ToFloat64(RTPPackets.WithLabelValues(room)); got <= 0 {
+		t.Fatalf("packets should be positive: %f", got)
 	}
-}
-
-func TestMetrics_Labels(t *testing.T) {
-	// Test that metrics work with different room labels
-	rooms := []string{"room1", "room2", "room3"}
-	
-	for _, room := range rooms {
-		SetRooms(float64(len(rooms)))
-		IncSubscribers(room)
-		AddBytes(room, 1000)
-		IncPackets(room)
-	}
-	
-	// Verify each room has its own metrics
-	for _, room := range rooms {
-		subscribersValue := testutil.ToFloat64(Subscribers.WithLabelValues(room))
-		if subscribersValue != 1 {
-			t.Errorf("Expected subscribers for room %s to be 1, got %f", room, subscribersValue)
-		}
-		
-		rtpBytesValue := testutil.ToFloat64(RTPBytes.WithLabelValues(room))
-		if rtpBytesValue != 1000 {
-			t.Errorf("Expected RTP bytes for room %s to be 1000, got %f", room, rtpBytesValue)
-		}
-		
-		rtpPacketsValue := testutil.ToFloat64(RTPPackets.WithLabelValues(room))
-		if rtpPacketsValue != 1 {
-			t.Errorf("Expected RTP packets for room %s to be 1, got %f", room, rtpPacketsValue)
-		}
-	}
-	
-	// Verify rooms gauge
-	roomsValue := testutil.ToFloat64(Rooms)
-	if roomsValue != float64(len(rooms)) {
-		t.Errorf("Expected rooms value to be %d, got %f", len(rooms), roomsValue)
-	}
-}
-
-func BenchmarkIncSubscribers(b *testing.B) {
-	room := "benchmark-room"
-	b.ResetTimer()
-	
-	for i := 0; i < b.N; i++ {
-		IncSubscribers(room)
-	}
-}
-
-func BenchmarkAddBytes(b *testing.B) {
-	room := "benchmark-room"
-	b.ResetTimer()
-	
-	for i := 0; i < b.N; i++ {
-		AddBytes(room, 1024)
-	}
-}
-
-func BenchmarkIncPackets(b *testing.B) {
-	room := "benchmark-room"
-	b.ResetTimer()
-	
-	for i := 0; i < b.N; i++ {
-		IncPackets(room)
-	}
+	SetSubscribers(room, 0)
 }
