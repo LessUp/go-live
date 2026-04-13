@@ -22,10 +22,12 @@ const maxSDPBodyBytes int64 = 1 << 20
 
 // HTTPHandlers 聚合了房间管理器与配置，负责对外暴露 WHIP/WHEP/管理等 API。
 type HTTPHandlers struct {
-	mgr     *sfu.Manager
-	cfg     *config.Config
-	mu      sync.Mutex
-	limiter map[string]*rate.Limiter // per-IP 限流器
+	mgr             *sfu.Manager
+	cfg             *config.Config
+	mu              sync.Mutex
+	limiter         map[string]*rate.Limiter // per-IP 限流器
+	limiterLastSeen map[string]time.Time     // per-IP 最后访问时间
+	limiterDone     chan struct{}            // 停止清理 goroutine
 }
 
 type bootstrapResponse struct {
@@ -40,6 +42,9 @@ func NewHTTPHandlers(m *sfu.Manager, c *config.Config) *HTTPHandlers {
 	h := &HTTPHandlers{mgr: m, cfg: c}
 	if c.RateLimitRPS > 0 {
 		h.limiter = make(map[string]*rate.Limiter)
+		h.limiterLastSeen = make(map[string]time.Time)
+		h.limiterDone = make(chan struct{})
+		go h.limiterGC()
 	}
 	return h
 }

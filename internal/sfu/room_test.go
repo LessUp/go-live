@@ -184,18 +184,21 @@ func TestClosePublisherLeavesFileForFailedUpload(t *testing.T) {
 
 	prevUpload := uploadRecordingFile
 	prevEnabled := uploaderEnabled
+	uploadDone := make(chan struct{})
 	uploadRecordingFile = func(_ context.Context, path string) error {
+		defer close(uploadDone)
 		return errors.New("upload failed")
 	}
 	uploaderEnabled = func() bool { return true }
 	defer func() {
+		<-uploadDone
 		uploadRecordingFile = prevUpload
 		uploaderEnabled = prevEnabled
 	}()
 
 	room.closePublisher(pub)
 
-	time.Sleep(50 * time.Millisecond)
+	<-uploadDone
 	if _, err := os.Stat(recordPath); err != nil {
 		t.Fatalf("expected local file to remain after failed upload: %v", err)
 	}

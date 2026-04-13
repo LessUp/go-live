@@ -3,6 +3,7 @@ package api
 import (
 	"io/fs"
 	"net/http"
+	"net/http/pprof"
 	"regexp"
 	"strings"
 
@@ -75,6 +76,14 @@ func (h *HTTPHandlers) RegisterRoutes(mux *http.ServeMux, webFS fs.FS, recordDir
 	// 录制文件静态服务：仅在启用录制时暴露 RECORD_DIR 下内容
 	if h.cfg.RecordEnabled {
 		mux.Handle("/records/", http.StripPrefix("/records/", http.FileServer(http.Dir(recordDir))))
+	}
+
+	// pprof 调试端点：仅在 PPROF=1 时启用
+	if h.cfg.PprofEnabled {
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	}
 
 	// 内嵌静态页面：publisher.html / player.html 等示例

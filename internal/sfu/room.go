@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -50,6 +50,18 @@ func (r *Room) empty() bool {
 
 func (r *Room) syncSubscriberMetricsLocked() {
 	metrics.SetSubscribers(r.name, len(r.subs))
+}
+
+func (r *Room) trackFeedCountForTest() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.trackFeeds)
+}
+
+func (r *Room) subscriberCountForTest() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.subs)
 }
 
 func (r *Room) attachTrackFeed(feed *trackFanout, remote *webrtc.TrackRemote) {
@@ -267,7 +279,7 @@ func (r *Room) setupRecording(feed *trackFanout, remote *webrtc.TrackRemote) {
 		return
 	}
 	if err := os.MkdirAll(r.mgr.cfg.RecordDir, 0o755); err != nil {
-		log.Printf("room %s: create record dir failed: %v", r.name, err)
+		slog.Error("create record dir", "room", r.name, "error", err)
 		return
 	}
 	base := fmt.Sprintf("%s_%s_%d", r.name, remote.ID(), time.Now().Unix())
@@ -278,14 +290,14 @@ func (r *Room) setupRecording(feed *trackFanout, remote *webrtc.TrackRemote) {
 		if w, err := oggwriter.New(p, 48000, 2); err == nil {
 			feed.setRecorder(w, p)
 		} else {
-			log.Printf("room %s: create ogg recorder failed: %v", r.name, err)
+			slog.Error("create ogg recorder", "room", r.name, "error", err)
 		}
 	case mime == webrtc.MimeTypeVP8 || mime == webrtc.MimeTypeVP9:
 		p := filepath.Join(r.mgr.cfg.RecordDir, base+".ivf")
 		if w, err := ivfwriter.New(p); err == nil {
 			feed.setRecorder(w, p)
 		} else {
-			log.Printf("room %s: create ivf recorder failed: %v", r.name, err)
+			slog.Error("create ivf recorder", "room", r.name, "error", err)
 		}
 	}
 }
@@ -362,6 +374,6 @@ func (r *Room) uploadRecording(path string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := uploadRecordingFile(ctx, path); err != nil {
-		log.Printf("room %s: upload failed for %s: %v", r.name, path, err)
+		slog.Error("upload recording", "room", r.name, "path", path, "error", err)
 	}
 }

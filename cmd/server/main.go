@@ -5,9 +5,8 @@ package main
 import (
 	"context"
 	"embed"
-	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +15,7 @@ import (
 
 	"live-webrtc-go/internal/api"
 	"live-webrtc-go/internal/config"
+	liveotel "live-webrtc-go/internal/otel"
 	"live-webrtc-go/internal/sfu"
 	"live-webrtc-go/internal/uploader"
 )
@@ -32,7 +32,8 @@ var webFS embed.FS
 func main() {
 	cfg := config.Load()
 	if err := uploader.Init(cfg); err != nil {
-		log.Fatalf("initialize uploader: %v", err)
+		slog.Error("initialize uploader", "error", err)
+		os.Exit(1)
 	}
 	mgr := sfu.NewManager(cfg)
 	h := api.NewHTTPHandlers(mgr, cfg)
@@ -40,17 +41,31 @@ func main() {
 	mux := http.NewServeMux()
 	staticFS, err := fs.Sub(webFS, "web")
 	if err != nil {
-		log.Fatalf("load embedded web assets: %v", err)
+		slog.Error("load embedded web assets", "error", err)
+		os.Exit(1)
 	}
 	h.RegisterRoutes(mux, staticFS, cfg.RecordDir)
 
+	// 初始化 OpenTelemetry tracing
+	otelShutdown, err := liveotel.InitTracer(cfg.OTELServiceName)
+	if err != nil {
+		slog.Error("initialize tracer", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := otelShutdown(context.Background()); err != nil {
+			slog.Error("tracer shutdown", "error", err)
+		}
+	}()
+
 	addr := cfg.HTTPAddr
-	fmt.Printf("Live WebRTC server listening on %s\n", addr)
-	fmt.Printf("Open http://localhost%s/web/publisher.html and http://localhost%s/web/player.html\n", addr, addr)
+	slog.Info("server starting", "addr", addr)
+	slog.Info("publisher page", "url", "http://localhost"+addr+"/web/publisher.html")
+	slog.Info("player page", "url", "http://localhost"+addr+"/web/player.html")
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           liveotel.TraceMiddleware(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -64,7 +79,8 @@ func main() {
 			err = srv.ListenAndServe()
 		}
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 

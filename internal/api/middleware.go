@@ -55,8 +55,31 @@ func (h *HTTPHandlers) allowRate(r *http.Request) bool {
 		limiter = rate.NewLimiter(rate.Limit(h.cfg.RateLimitRPS), burst)
 		h.limiter[host] = limiter
 	}
+	h.limiterLastSeen[host] = time.Now()
 	h.mu.Unlock()
 	return limiter.Allow()
+}
+
+// limiterGC 每分钟清理超过 10 分钟未访问的限流器条目，防止内存泄漏。
+func (h *HTTPHandlers) limiterGC() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			h.mu.Lock()
+			cutoff := time.Now().Add(-10 * time.Minute)
+			for ip, t := range h.limiterLastSeen {
+				if t.Before(cutoff) {
+					delete(h.limiter, ip)
+					delete(h.limiterLastSeen, ip)
+				}
+			}
+			h.mu.Unlock()
+		case <-h.limiterDone:
+			return
+		}
+	}
 }
 
 // authOKRoom 校验访问权限：优先房间级 Token，再回退到全局 Token 或 JWT；

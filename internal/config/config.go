@@ -40,6 +40,7 @@ type Config struct {
 	JWTSecret         string            // JWT HMAC 密钥
 	JWTAudience       string            // JWT audience（可选）
 	PprofEnabled      bool              // 是否启用 pprof 调试端点
+	OTELServiceName   string            // OpenTelemetry 服务名称
 }
 
 // Load 会读取环境变量并填充 Config，使用合理的默认值。
@@ -98,6 +99,7 @@ func Load() *Config {
 	c.JWTSecret = getEnv("JWT_SECRET", "")
 	c.JWTAudience = getEnv("JWT_AUDIENCE", "")
 	c.PprofEnabled = getEnv("PPROF", "") == "1"
+	c.OTELServiceName = getEnv("OTEL_SERVICE_NAME", "live-webrtc-go")
 	return c
 }
 

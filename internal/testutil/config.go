@@ -33,5 +33,6 @@ func TestConfig() *config.Config {
 		JWTSecret:         "",
 		JWTAudience:       "",
 		PprofEnabled:      false,
+		OTELServiceName:   "live-webrtc-go",
 	}
 }
