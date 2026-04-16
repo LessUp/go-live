@@ -278,6 +278,8 @@ func (r *Room) setupRecording(feed *trackFanout, remote *webrtc.TrackRemote) {
 	if r.mgr == nil || r.mgr.cfg == nil {
 		return
 	}
+	// G301: 0o755 is required for WebRTC recording directory access
+	// #nosec G301
 	if err := os.MkdirAll(r.mgr.cfg.RecordDir, 0o755); err != nil {
 		slog.Error("create record dir", "room", r.name, "error", err)
 		return

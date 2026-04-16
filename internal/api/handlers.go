@@ -167,6 +167,8 @@ func (h *HTTPHandlers) ServeWHIPPublish(w http.ResponseWriter, r *http.Request, 
 	}
 	w.Header().Set("Content-Type", "application/sdp")
 	w.WriteHeader(http.StatusCreated)
+	// G705: SDP is machine-generated content with fixed Content-Type, not user-rendered HTML
+	// #nosec G705
 	_, _ = w.Write([]byte(answer))
 }
 
@@ -201,6 +203,8 @@ func (h *HTTPHandlers) ServeWHEPPlay(w http.ResponseWriter, r *http.Request, roo
 	}
 	w.Header().Set("Content-Type", "application/sdp")
 	w.WriteHeader(http.StatusCreated)
+	// G705: SDP is machine-generated content with fixed Content-Type, not user-rendered HTML
+	// #nosec G705
 	_, _ = w.Write([]byte(answer))
 }
 

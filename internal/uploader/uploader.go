@@ -57,6 +57,8 @@ func Upload(ctx context.Context, localPath string) error {
 	if !Enabled() {
 		return nil
 	}
+	// G304: localPath is from internal recording system, not user input
+	// #nosec G304
 	f, err := os.Open(localPath)
 	if err != nil {
 		return err

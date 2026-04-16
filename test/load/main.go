@@ -191,7 +191,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to server: %v", err)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		log.Printf("warning: failed to close response body: %v", err)
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		log.Fatalf("Server health check failed: %d", resp.StatusCode)
