@@ -49,6 +49,14 @@ func NewHTTPHandlers(m *sfu.Manager, c *config.Config) *HTTPHandlers {
 	return h
 }
 
+// Close stops background goroutines and releases resources.
+// Should be called during server shutdown.
+func (h *HTTPHandlers) Close() {
+	if h.limiterDone != nil {
+		close(h.limiterDone)
+	}
+}
+
 func (h *HTTPHandlers) readSDPBody(w http.ResponseWriter, r *http.Request) (string, bool) {
 	defer r.Body.Close()
 	limited := http.MaxBytesReader(w, r.Body, maxSDPBodyBytes)

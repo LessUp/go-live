@@ -1,72 +1,126 @@
 ---
 layout: default
-title: 首页
+title: Go-Live Documentation
+description: WebRTC SFU Server Documentation - 轻量级 WebRTC SFU 服务器文档
+nav_order: 0
 ---
 
-# live-webrtc-go
+# Go-Live Documentation
 
-使用 Go + [Pion WebRTC](https://github.com/pion/webrtc) 构建的轻量级在线直播服务示例。实现了 WHIP 推流、WHEP 播放、嵌入式 Web 页面、可配置鉴权与房间状态查询，可作为开源参考或项目脚手架。
+## Select Language / 选择语言
 
-## 功能特点
+<div class="language-selector">
+  <a href="{{ site.baseurl }}/en/" class="lang-card">
+    <div class="lang-icon">🇺🇸</div>
+    <h2>English</h2>
+    <p>Lightweight WebRTC SFU Server Documentation</p>
+    <ul>
+      <li>Quick Start Guide</li>
+      <li>Deployment Instructions</li>
+      <li>API Reference</li>
+      <li>Architecture Design</li>
+    </ul>
+    <span class="lang-button">Enter Documentation →</span>
+  </a>
+  
+  <a href="{{ site.baseurl }}/zh/" class="lang-card">
+    <div class="lang-icon">🇨🇳</div>
+    <h2>中文</h2>
+    <p>轻量级 WebRTC SFU 服务器文档</p>
+    <ul>
+      <li>快速开始指南</li>
+      <li>部署说明</li>
+      <li>API 参考</li>
+      <li>架构设计</li>
+    </ul>
+    <span class="lang-button">进入文档 →</span>
+  </a>
+</div>
 
-- **WebRTC SFU**：基于 Pion 实现最小可用的房间转发逻辑，支持多观众同时观看。
-- **WHIP / WHEP 接口**：HTTP API 兼容现代浏览器或 OBS WHIP 插件推流与播放。
-- **可选鉴权**：支持 Token / JWT 三层优先级鉴权体系。
-- **房间状态查询**：`GET /api/rooms` 返回在线房间、发布者与订阅者统计。
-- **录制能力**：可选将 VP8/VP9 保存为 IVF、Opus 保存为 OGG，并支持 S3/MinIO 上传。
-- **监控指标**：`GET /metrics` 暴露 Prometheus 指标（RTP 字节/包、订阅者数、房间数）。
-- **容器化**：提供 Dockerfile 与 docker-compose.yml，支持挂载录制目录与配置环境变量。
+---
 
-## 快速开始
+## About / 关于
 
-```bash
-git clone https://github.com/LessUp/go-live.git
-cd go-live
-go mod tidy
-go run ./cmd/server
-```
+**Go-Live** is a lightweight, high-performance WebRTC SFU (Selective Forwarding Unit) server built with Go and Pion WebRTC. It supports WHIP/WHEP protocols for streaming, room-based broadcast, recording, and comprehensive observability.
 
-启动后访问：
+**Go-Live** 是基于 Go 和 Pion WebRTC 构建的轻量级、高性能 WebRTC SFU（选择性转发单元）服务器。支持 WHIP/WHEP 协议推流、房间广播、录制功能和完整可观测性。
 
-| 页面 | 地址 |
-|------|------|
-| 推流页 | `http://localhost:8080/web/publisher.html` |
-| 播放页 | `http://localhost:8080/web/player.html` |
-| 房间列表 | `http://localhost:8080/api/rooms` |
-| 健康检查 | `http://localhost:8080/healthz` |
-| 指标监控 | `http://localhost:8080/metrics` |
+### Quick Links / 快速链接
 
-## HTTP API
+| Resource / 资源 | Link / 链接 |
+|----------------|-------------|
+| GitHub Repository | [github.com/LessUp/go-live](https://github.com/LessUp/go-live) |
+| Releases / 版本发布 | [GitHub Releases](https://github.com/LessUp/go-live/releases) |
+| Issues / 问题反馈 | [GitHub Issues](https://github.com/LessUp/go-live/issues) |
+| Changelog / 更新日志 | [CHANGELOG.md](https://github.com/LessUp/go-live/blob/master/CHANGELOG.md) |
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `POST` | `/api/whip/publish/{room}` | WHIP 推流 |
-| `POST` | `/api/whep/play/{room}` | WHEP 播放 |
-| `GET` | `/api/rooms` | 房间列表与在线状态 |
-| `GET` | `/api/records` | 录制文件列表 |
-| `POST` | `/api/admin/rooms/{room}/close` | 关闭指定房间 |
-| `GET` | `/healthz` | 健康检查 |
-| `GET` | `/metrics` | Prometheus 指标 |
+<style>
+.language-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 2rem 0;
+}
 
-## 项目结构
+.lang-card {
+  display: block;
+  padding: 2rem;
+  border: 2px solid #e1e4e8;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+}
 
-```
-├── cmd/server          # 入口程序（HTTP + WebRTC）
-│   └── web             # 嵌入式静态页面
-├── internal/api        # HTTP handlers (WHIP/WHEP/Rooms)
-├── internal/config     # 配置加载
-├── internal/metrics    # Prometheus 指标
-├── internal/sfu        # WebRTC SFU 管理逻辑
-├── internal/uploader   # S3/MinIO 上传
-├── docs/               # 项目文档（本站）
-└── test/               # 测试套件
-```
+.lang-card:hover {
+  border-color: #0969da;
+  box-shadow: 0 4px 12px rgba(9, 105, 218, 0.15);
+  text-decoration: none;
+}
 
-## 文档导航
+.lang-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
 
-- [**使用指南**](usage) — 完整的启动、部署、API 示例与排障。
-- [**设计说明**](design) — 架构背景、模块拆分与数据流。
+.lang-card h2 {
+  margin: 0 0 0.5rem 0;
+  color: #24292f;
+}
 
-## 许可协议
+.lang-card p {
+  color: #57606a;
+  margin-bottom: 1rem;
+}
 
-本项目以 MIT 协议开源。欢迎 Issue 与 Pull Request！
+.lang-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+}
+
+.lang-card li {
+  padding: 0.25rem 0;
+  color: #57606a;
+}
+
+.lang-card li::before {
+  content: "✓ ";
+  color: #1a7f37;
+  font-weight: bold;
+}
+
+.lang-button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: #0969da;
+  color: white;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.lang-card:hover .lang-button {
+  background: #0550ae;
+}
+</style>

@@ -89,6 +89,9 @@ func main() {
 	<-stop
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_ = srv.Shutdown(ctx)
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("server shutdown", "error", err)
+	}
+	h.Close()
 	mgr.CloseAll()
 }

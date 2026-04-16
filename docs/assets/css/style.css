@@ -1,0 +1,331 @@
+/* Base styles for custom layout */
+.site-header {
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #e1e4e8;
+  background: #f6f8fa;
+}
+
+.site-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.site-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: #24292f;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 1.5rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #57606a;
+  font-weight: 500;
+}
+
+.nav-links a:hover {
+  color: #0969da;
+}
+
+.site-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.post-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.post-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #24292f;
+  margin: 0;
+}
+
+.post-content {
+  line-height: 1.8;
+}
+
+.post-content h1,
+.post-content h2,
+.post-content h3,
+.post-content h4,
+.post-content h5,
+.post-content h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #24292f;
+}
+
+.post-content h2 {
+  font-size: 1.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.post-content h3 {
+  font-size: 1.25rem;
+}
+
+.post-content p {
+  margin-bottom: 1em;
+}
+
+.post-content ul,
+.post-content ol {
+  padding-left: 2em;
+  margin-bottom: 1em;
+}
+
+.post-content li {
+  margin-bottom: 0.25em;
+}
+
+.post-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+.post-content th,
+.post-content td {
+  padding: 0.75rem;
+  border: 1px solid #e1e4e8;
+  text-align: left;
+}
+
+.post-content th {
+  background: #f6f8fa;
+  font-weight: 600;
+}
+
+.post-content tr:nth-child(even) {
+  background: #f6f8fa;
+}
+
+.post-content code {
+  background: #f6f8fa;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.post-content pre {
+  background: #f6f8fa;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.post-content pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.875em;
+}
+
+.post-content blockquote {
+  border-left: 4px solid #0969da;
+  padding-left: 1rem;
+  margin-left: 0;
+  color: #57606a;
+  font-style: italic;
+}
+
+.post-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.post-content a {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.post-content a:hover {
+  text-decoration: underline;
+}
+
+/* Footer styles */
+.site-footer {
+  padding: 2rem;
+  text-align: center;
+  border-top: 1px solid #e1e4e8;
+  background: #f6f8fa;
+  color: #57606a;
+  font-size: 0.9rem;
+}
+
+.site-footer a {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .site-nav {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .post-title {
+    font-size: 1.5rem;
+  }
+
+  .post-content h2 {
+    font-size: 1.25rem;
+  }
+
+  .post-content h3 {
+    font-size: 1.1rem;
+  }
+}
+
+/* Code syntax highlighting overrides */
+.highlight {
+  background: #f6f8fa;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1em;
+  overflow-x: auto;
+}
+
+.highlight pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Responsive tables */
+.post-content table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+@media (min-width: 769px) {
+  .post-content table {
+    display: table;
+    white-space: normal;
+  }
+}
+
+/* Table of contents styling */
+.post-content .toc {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.post-content .toc ul {
+  list-style: none;
+  padding-left: 1rem;
+  margin: 0;
+}
+
+.post-content .toc li {
+  margin-bottom: 0.5em;
+}
+
+.post-content .toc a {
+  color: #0969da;
+}
+
+/* Badge styling */
+.post-content img[src*="shields.io"] {
+  display: inline;
+  margin: 0 0.25rem;
+  vertical-align: middle;
+}
+
+/* Architecture diagram styling */
+.post-content pre code.language-text {
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+
+/* Language Switcher Styles */
+.language-switcher {
+  background: #24292f;
+  padding: 0.5rem 2rem;
+  font-size: 0.875rem;
+}
+
+.lang-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.lang-label {
+  color: #8c959f;
+  margin-right: 0.5rem;
+}
+
+.lang-link {
+  color: #ffffff;
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.lang-link:hover {
+  background-color: #57606a;
+  text-decoration: none;
+}
+
+.lang-link.active {
+  background-color: #0969da;
+  font-weight: 600;
+}
+
+.lang-separator {
+  color: #57606a;
+  margin: 0 0.25rem;
+}
+
+/* Responsive language switcher */
+@media (max-width: 768px) {
+  .language-switcher {
+    padding: 0.5rem 1rem;
+  }
+  
+  .lang-container {
+    justify-content: center;
+  }
+}

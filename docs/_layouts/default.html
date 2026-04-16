@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: site.lang | default: 'zh' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    {% seo %}
+
+    <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/style.css">
+    <link rel="canonical" href="{{ page.url | replace:'index.html','' | absolute_url }}">
+
+    {% if site.plugins contains "jekyll-sitemap" %}
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="{{ site.baseurl }}/sitemap.xml">
+    {% endif %}
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ site.baseurl }}/assets/favicon.svg">
+  </head>
+  <body>
+    <!-- Language Switcher -->
+    <div class="language-switcher">
+      <div class="lang-container">
+        <span class="lang-label">{{ site.data.i18n.language[page.lang] | default: 'Language' }}:</span>
+        {% for lang in site.languages %}
+          {% if page.lang == lang.code %}
+            <span class="lang-link active">{{ lang.name }}</span>
+          {% else %}
+            <a class="lang-link" href="{{ site.baseurl }}{{ lang.url }}">{{ lang.name }}</a>
+          {% endif %}
+          {% unless forloop.last %}<span class="lang-separator">|</span>{% endunless %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <header class="site-header">
+      <nav class="site-nav">
+        <a class="site-title" href="{{ site.baseurl }}/">{{ site.title }}</a>
+        <ul class="nav-links">
+          {% for item in site.navigation %}
+          {% unless item.lang and item.lang != page.lang %}
+          <li>
+            {% if item.external %}
+            <a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+            {% else %}
+            <a href="{{ site.baseurl }}{{ item.url }}">{{ item.title }}</a>
+            {% endif %}
+          </li>
+          {% endunless %}
+          {% endfor %}
+        </ul>
+      </nav>
+    </header>
+
+    <main class="site-content">
+      <article class="post">
+        <header class="post-header">
+          <h1 class="post-title">{{ page.title }}</h1>
+        </header>
+        <div class="post-content">
+          {{ content }}
+        </div>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        &copy; {{ site.time | date: '%Y' }} {{ site.author }}.
+        {% if page.lang == 'zh' %}
+        本项目以 <a href="https://github.com/LessUp/go-live/blob/master/LICENSE">MIT 协议</a> 开源。
+        {% else %}
+        Licensed under <a href="https://github.com/LessUp/go-live/blob/master/LICENSE">MIT License</a>.
+        {% endif %}
+      </p>
+      <p>
+        <a href="https://github.com/LessUp/go-live">GitHub</a> |
+        <a href="https://github.com/LessUp/go-live/issues">{% if page.lang == 'zh' %}问题反馈{% else %}Issues{% endif %}</a> |
+        <a href="{{ site.baseurl }}/sitemap.xml">Sitemap</a>
+      </p>
+    </footer>
+  </body>
+</html>

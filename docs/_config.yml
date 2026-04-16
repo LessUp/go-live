@@ -1,25 +1,67 @@
 title: Go-Live
 description: >-
-  使用 Go + Pion WebRTC 构建的轻量级在线直播服务 — WHIP/WHEP 推拉流、SFU 转发、录制与 Prometheus 监控
+  Lightweight WebRTC SFU Server — Built with Go + Pion WebRTC, supporting WHIP/WHEP streaming, room broadcast, recording and observability
+tagline: WebRTC SFU Server
 remote_theme: pages-themes/cayman@v0.2.0
 plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Repository
 repository: LessUp/go-live
 show_downloads: false
 
-# SEO & metadata
-url: https://lessup.github.io
-baseurl: /go-live
-lang: zh-CN
+# Site URL (for SEO and sitemap)
+url: "https://lessup.github.io"
+baseurl: "/go-live"
+
+# Default language
+lang: zh
 author: LessUp
 
-# Markdown rendering
+# Social / SEO
+twitter:
+  username:
+  card: summary
+social:
+  name: LessUp
+  links:
+    - https://github.com/LessUp
+
+# Logo (optional, for SEO tag)
+logo: /assets/logo.png
+
+# Markdown configuration
 markdown: kramdown
 kramdown:
   input: GFM
   hard_wrap: false
   syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+# Navigation header links (Cayman theme)
+navigation:
+  - title: 首页
+    url: /zh/
+    lang: zh
+  - title: Home
+    url: /en/
+    lang: en
+  - title: GitHub
+    url: https://github.com/LessUp/go-live
+    external: true
+
+# Language switcher
+languages:
+  - code: zh
+    name: 中文
+    url: /zh/
+  - code: en
+    name: English
+    url: /en/
 
 # Default layout for all pages
 defaults:
@@ -27,12 +69,51 @@ defaults:
       path: ""
     values:
       layout: default
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      seo:
+        type: WebSite
 
-# Exclude non-doc files
+# Exclude non-doc files from processing
 exclude:
   - Gemfile
   - Gemfile.lock
   - vendor
+  - node_modules
   - "*.go"
-  - "*.mod"
-  - "*.sum"
+  - go.mod
+  - go.sum
+  - Makefile
+  - Dockerfile
+  - docker-compose.yml
+  - .gitignore
+  - .github
+
+# Include these files
+include:
+  - robots.txt
+  - sitemap.xml
+
+# Pagination (if needed later)
+# paginate: 10
+# paginate_path: "/blog/page:num/"
+
+# Timezone
+timezone: Asia/Shanghai
+
+# Build settings
+lsi: false
+incremental: false
+gist:
+  noscript: false
+
+# HTML compression
+compress_html:
+  clippings: all
+  comments: all
+  endings: all
+  startings: all
+  blanklines: false
+  profile: false

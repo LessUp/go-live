@@ -20,12 +20,6 @@ func (m *Manager) roomCountLocked() int {
 	return len(m.rooms)
 }
 
-func (m *Manager) getRoom(name string) *Room {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.rooms[name]
-}
-
 func (m *Manager) ensureRoom(name string) *Room {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -55,13 +49,6 @@ func (m *Manager) deleteRoomIfEmpty(r *Room) bool {
 	delete(m.rooms, r.name)
 	metrics.SetRooms(float64(m.roomCountLocked()))
 	return true
-}
-
-func (m *Manager) pruneRoom(name string) {
-	m.mu.RLock()
-	r := m.rooms[name]
-	m.mu.RUnlock()
-	m.deleteRoomIfEmpty(r)
 }
 
 // NewManager 创建一个房间管理器。

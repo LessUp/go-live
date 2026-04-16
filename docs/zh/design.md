@@ -1,22 +1,24 @@
 ---
 layout: default
 title: 设计说明
+nav_order: 3
+lang: zh
 ---
 
 # 设计说明
 
 本文档详细描述 live-webrtc-go 的系统架构、模块拆分、数据流向与扩展点，便于二次开发或架构评审。
 
+{: .no_toc }
+
 ## 目录
 
-- [系统架构](#系统架构)
-- [核心概念](#核心概念)
-- [模块详解](#模块详解)
-- [数据流](#数据流)
-- [认证体系](#认证体系)
-- [录制与上传](#录制与上传)
-- [可观测性](#可观测性)
-- [扩展点](#扩展点)
+{: .no_toc .text-delta }
+
+1. TOC
+{:toc}
+
+---
 
 ## 系统架构
 
@@ -26,30 +28,30 @@ title: 设计说明
                            ┌─────────────────────────────────────┐
                            │          HTTP Server :8080          │
                            │                                     │
-   ┌──────────┐            │  ┌─────────┐    ┌─────────────┐    │
-   │ Publisher│ ──WHIP──▶  │  │  Auth   │───▶│   SFU       │    │
-   │ (OBS/Web)│            │  │Middleware│    │  Manager    │    │
-   └──────────┘            │  └─────────┘    └──────┬──────┘    │
+    ┌──────────┐           │  ┌─────────┐    ┌─────────────┐    │
+    │  推流端   │ ──WHIP──▶ │  │  认证    │───▶│   SFU       │    │
+    │(OBS/网页) │           │  │ 中间件   │    │  管理器      │    │
+    └──────────┘           │  └─────────┘    └──────┬──────┘    │
                            │                         │           │
-   ┌──────────┐            │         ┌───────────────┤           │
-   │  Viewer  │ ◀──WHEP──  │         │               │           │
-   │(Browser) │ ───────▶   │         ▼               ▼           │
-   └──────────┘            │  ┌─────────────┐ ┌───────────┐     │
-                           │  │    Room     │ │ Recording │     │
-                           │  │  (Fanout)   │ │  & Upload │     │
-                           │  └──────┬──────┘ └─────┬─────┘     │
-                           └─────────┼──────────────┼───────────┘
+    ┌──────────┐           │         ┌───────────────┤           │
+    │  观看端   │ ◀──WHEP── │         │               │           │
+    │ (浏览器)  │ ───────▶  │         ▼               ▼           │
+    └──────────┘           │  ┌─────────────┐ ┌───────────┐      │
+                           │  │    房间      │ │   录制    │      │
+                           │  │  (转发)      │ │  与上传   │      │
+                           │  └──────┬──────┘ └─────┬─────┘      │
+                           └─────────┼──────────────┼────────────┘
                                      │              │
                            ┌─────────▼──────────────▼───────────┐
-                           │          Object Storage            │
-                           │           (S3/MinIO)               │
+                           │          对象存储                   │
+                           │         (S3/MinIO)                 │
                            └────────────────────────────────────┘
 ```
 
 ### 请求处理链
 
 ```
-HTTP Request
+HTTP 请求
     │
     ▼
 ┌─────────────┐
@@ -58,43 +60,47 @@ HTTP Request
        │
        ▼
 ┌─────────────┐
-│ Rate Limiter│ ← RATE_LIMIT_RPS, RATE_LIMIT_BURST
+│   限流器     │ ← RATE_LIMIT_RPS, RATE_LIMIT_BURST
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│   Auth      │ ← AUTH_TOKEN / ROOM_TOKENS / JWT_SECRET
+│    认证      │ ← AUTH_TOKEN / ROOM_TOKENS / JWT_SECRET
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│   Handler   │ → Business Logic
+│   处理器     │ → 业务逻辑
 └─────────────┘
 ```
 
+---
+
 ## 核心概念
 
-### Room（房间）
+### 房间（Room）
 
 房间是 SFU 的核心抽象，每个房间：
-- 最多一个 Publisher（发布者）
-- 可有多个 Subscriber（订阅者）
-- 拥有独立的 Track Fanout 逻辑
-- 可配置独立的认证 Token
+- 最多一个发布者（Publisher）
+- 可有多个订阅者（Subscriber）
+- 拥有独立的轨道转发逻辑
+- 可配置独立的认证令牌
 
-### Track Fanout（轨道分发）
+### 轨道转发（Track Fanout）
 
-当发布者推送媒体轨道时，系统创建 Track Fanout：
+当发布者推送媒体轨道时，系统创建轨道转发：
 - 从发布者 PeerConnection 读取 RTP 包
 - 复制并分发给所有订阅者
 - 可选写入录制文件
 
-### PeerConnection（对等连接）
+### 对等连接（PeerConnection）
 
 每个 WebRTC 连接：
 - 发布者：接收媒体轨道
 - 订阅者：发送媒体轨道
 - ICE 协商通过 WHIP/WHEP 协议完成
+
+---
 
 ## 模块详解
 
@@ -111,7 +117,7 @@ HTTP Request
 5. RegisterRoutes()        // 注册路由
 6. otel.InitTracer()       // 初始化追踪
 7. http.Server.Listen()    // 启动服务
-8. Graceful Shutdown       // 优雅退出
+8. 优雅退出                 // 优雅关闭
 ```
 
 ### internal/config
@@ -142,19 +148,19 @@ HTTP Request
 
 | 文件 | 功能 |
 |------|------|
-| `handlers.go` | WHIP/WHEP/Rooms/Records/Admin 端点处理 |
+| `handlers.go` | WHIP/WHEP/房间/录制/管理端点处理 |
 | `middleware.go` | CORS、限流、Token/JWT 认证 |
 | `routes.go` | URL 路由、参数提取、房间名校验 |
 
 **认证优先级**：
 ```
-1. Room-specific Token (ROOM_TOKENS)
-    ↓ (not found or failed)
-2. Global Token (AUTH_TOKEN)
-    ↓ (not found or failed)
+1. 房间级 Token (ROOM_TOKENS)
+    ↓ (未找到或失败)
+2. 全局 Token (AUTH_TOKEN)
+    ↓ (未找到或失败)
 3. JWT (JWT_SECRET)
-    ↓ (not found or failed)
-4. Allow (no auth configured)
+    ↓ (未找到或失败)
+4. 允许访问 (未配置认证)
 ```
 
 ### internal/sfu
@@ -212,20 +218,22 @@ HTTP Request
 **职责**：S3/MinIO 文件上传
 
 ```
-Upload Flow:
-1. Check Enabled() → client != nil
-2. Open local file
-3. Build object key (prefix + filename)
+上传流程:
+1. 检查 Enabled() → client != nil
+2. 打开本地文件
+3. 构建对象键 (prefix + filename)
 4. client.PutObject()
-5. (Optional) Delete local file
+5. (可选) 删除本地文件
 ```
+
+---
 
 ## 数据流
 
 ### 推流流程 (WHIP)
 
 ```
-1. Publisher → POST /api/whip/publish/{room}
+1. 发布者 → POST /api/whip/publish/{room}
    │
 2. HTTPHandlers.ServeWHIPPublish()
    │  ├─ CORS 检查
@@ -255,7 +263,7 @@ Upload Flow:
 ### 播放流程 (WHEP)
 
 ```
-1. Viewer → POST /api/whep/play/{room}
+1. 观看者 → POST /api/whep/play/{room}
    │
 2. HTTPHandlers.ServeWHEPPlay()
    │  ├─ CORS/限流/认证检查
@@ -278,11 +286,11 @@ Upload Flow:
 ### 断开连接
 
 ```
-ICE State Change (Failed/Disconnected/Closed)
+ICE 状态变更 (Failed/Disconnected/Closed)
     │
     ▼
 ┌─────────────────────────────────────┐
-│ Publisher 断开                       │
+│ 发布者断开                           │
 ├─────────────────────────────────────┤
 │ 1. closePublisher()                  │
 │ 2. 关闭所有 TrackFanout              │
@@ -292,21 +300,23 @@ ICE State Change (Failed/Disconnected/Closed)
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
-│ Subscriber 断开                      │
+│ 订阅者断开                           │
 ├─────────────────────────────────────┤
 │ 1. removeSubscriber()                │
-│ 2. 从所有 TrackFanout 移除绑定       │
-│ 3. 关闭 PeerConnection              │
+│ 2. 从 TrackFanouts 移除绑定          │
+│ 3. 关闭 PeerConnection               │
 │ 4. pruneIfEmpty()                    │
 └─────────────────────────────────────┘
 ```
+
+---
 
 ## 认证体系
 
 ### Token 认证
 
 ```
-优先级 1: Room Token (ROOM_TOKENS)
+优先级 1: 房间 Token (ROOM_TOKENS)
 ┌─────────────────────────────────────┐
 │ ROOM_TOKENS="room1:abc;room2:def"   │
 │                                      │
@@ -315,7 +325,7 @@ ICE State Change (Failed/Disconnected/Closed)
 │ 访问 room3 → 回退到全局 Token       │
 └─────────────────────────────────────┘
 
-优先级 2: Global Token (AUTH_TOKEN)
+优先级 2: 全局 Token (AUTH_TOKEN)
 ┌─────────────────────────────────────┐
 │ AUTH_TOKEN="secret123"              │
 │                                      │
@@ -335,9 +345,11 @@ type roomClaims struct {
 }
 
 // 使用场景
-1. 房间访问: claims.Room == room 或 claims.Room == ""
-2. 管理接口: claims.Role == "admin" 或 claims.Admin == true
+1. 房间访问: claims.Room == room or claims.Room == ""
+2. 管理接口: claims.Role == "admin" or claims.Admin == true
 ```
+
+---
 
 ## 录制与上传
 
@@ -345,7 +357,7 @@ type roomClaims struct {
 
 | 编解码器 | 文件格式 | 写入器 |
 |----------|----------|--------|
-| Opus | .ogg | oggwriter (48kHz, 2ch) |
+| Opus | .ogg | oggwriter (48kHz, 双声道) |
 | VP8 | .ivf | ivfwriter |
 | VP9 | .ivf | ivfwriter |
 
@@ -374,8 +386,10 @@ go uploadRecording(path)
     ▼
 Upload(ctx, path)
     ├─ PutObject(S3Bucket, objectKey, file)
-    └─ (Optional) os.Remove(localFile)
+    └─ (可选) os.Remove(localFile)
 ```
+
+---
 
 ## 可观测性
 
@@ -412,6 +426,8 @@ OTEL_SERVICE_NAME=live-webrtc-go
 ```
 GET /healthz → "ok" (200 OK)
 ```
+
+---
 
 ## 扩展点
 
@@ -450,6 +466,8 @@ type rtpWriter interface {
 - 实时转封装（MP4）
 - 流式上传（不落地）
 - CDN 推送
+
+---
 
 ## 性能考量
 

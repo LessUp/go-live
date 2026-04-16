@@ -1,156 +1,313 @@
 # live-webrtc-go
 
-[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=github)](https://lessup.github.io/go-live/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/LessUp/go-live)](https://goreportcard.com/report/github.com/LessUp/go-live)
+![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
+[![Release](https://img.shields.io/github/v/release/LessUp/go-live)](https://github.com/LessUp/go-live/releases)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](Dockerfile)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=github)](https://lessup.github.io/go-live/)
 
-[English](README.md) | 简体中文
+[English](README.md) | **简体中文**
 
-使用 Go + [Pion WebRTC](https://github.com/pion/webrtc) 构建的轻量级在线直播服务。提供 WHIP 推流、WHEP 播放、嵌入式 Web 页面、可配置鉴权、房间状态查询、录制与 Prometheus 指标。
+基于 Go 和 [Pion WebRTC](https://github.com/pion/webrtc) 构建的轻量级、高性能 **WebRTC SFU**（选择性转发单元）服务器。支持 WHIP/WHEP 协议推流、房间广播、录制功能和完整可观测性。
 
-## 功能特点
+---
 
-- 基于房间的轻量级 WebRTC SFU
-- WHIP / WHEP 推流与播放接口
-- 内嵌 Web 页面（`/web/`）
-- `/api/bootstrap` 与 `/api/rooms` 运行时查询接口
-- 可选全局 Token / 房间 Token / JWT 鉴权
-- 可选本地录制（`.ivf` / `.ogg`）
-- `/metrics` 与 `/healthz`
-- Dockerfile 与 docker-compose 支持
+## 📋 目录
 
-## 运行要求
+- [特性](#-特性)
+- [快速开始](#-快速开始)
+- [安装](#-安装)
+- [配置](#-配置)
+- [API 参考](#-api-参考)
+- [文档](#-文档)
+- [开发](#-开发)
+- [Docker 部署](#-docker-部署)
+- [参与贡献](#-参与贡献)
+- [许可协议](#-许可协议)
 
-- Go 1.22+
-- 支持 WebRTC 的浏览器
-- 可选：Docker / Docker Compose
+---
 
-## 快速开始
+## ✨ 特性
 
-```bash
-git clone https://github.com/LessUp/go-live.git
-cd go-live
-go run ./cmd/server
+| 特性 | 说明 |
+|------|------|
+| 🎥 **WHIP/WHEP 协议** | 标准 HTTP 协议的 WebRTC 推流和播放，兼容 OBS 和现代浏览器 |
+| 🏠 **房间 SFU 架构** | 每房间单发布者、多订阅者，高效的媒体转发 |
+| 🔐 **灵活认证体系** | 支持全局 Token、房间级 Token、JWT 角色认证 |
+| 📹 **录制与上传** | VP8/VP9 → IVF、Opus → OGG，支持 S3/MinIO 自动上传 |
+| 📊 **完整可观测性** | Prometheus 指标、OpenTelemetry 追踪、健康检查端点 |
+| 🐳 **云原生就绪** | 支持 Docker、Docker Compose，适配 Kubernetes |
+| 🌐 **嵌入式 Web 界面** | 内置推流和播放页面，开箱即用 |
+
+---
+
+## 🏗️ 系统架构
+
+```
+                         ┌─────────────────────────────────────┐
+                         │          HTTP Server :8080          │
+                         │                                     │
+    ┌──────────┐         │  ┌─────────┐    ┌─────────────┐    │
+    │  推流端   │ ──WHIP──▶│  │  认证    │───▶│   SFU       │    │
+    │(OBS/网页) │         │  │ 中间件    │    │  管理器      │    │
+    └──────────┘         │  └─────────┘    └──────┬──────┘    │
+                         │                        │           │
+    ┌──────────┐         │        ┌───────────────┤           │
+    │  观看端   │ ◀──WHEP──│        │               │           │
+    │ (浏览器)  │───────▶  │        ▼               ▼           │
+    └──────────┘         │ ┌─────────────┐ ┌───────────┐      │
+                         │ │    房间      │ │   录制    │      │
+                         │ │  (转发)      │ │  与上传   │      │
+                         │ └──────┬──────┘ └─────┬─────┘      │
+                         └────────┼──────────────┼────────────┘
+                                  │              │
+                        ┌─────────▼──────────────▼───────────┐
+                        │          对象存储                   │
+                        │         (S3/MinIO)                 │
+                        └────────────────────────────────────┘
 ```
 
-也可以直接使用本地启动脚本：
+---
+
+## 🚀 快速开始
+
+### 前置要求
+
+- Go 1.22+（源码构建）
+- 或 Docker（容器部署）
+
+### 从源码运行
 
 ```bash
+# 克隆代码仓库
+git clone https://github.com/LessUp/go-live.git
+cd go-live
+
+# 直接运行
+go run ./cmd/server
+
+# 或使用开发脚本
 ./scripts/start.sh
 ```
 
-脚本会准备本地缓存目录，并在存在时加载 `.env.local`。
-现在脚本**默认不会**执行 `go mod tidy`。如需执行：
+### 使用 Docker 运行
 
 ```bash
-RUN_TIDY=1 ./scripts/start.sh
+docker run --rm -p 8080:8080 ghcr.io/lessup/go-live:latest
 ```
 
-启动后可访问：
+### 访问应用
 
-- 首页：http://localhost:8080/web/index.html
-- 推流页：http://localhost:8080/web/publisher.html
-- 播放页：http://localhost:8080/web/player.html
-- 录制列表页：http://localhost:8080/web/records.html
-- 运行时配置：http://localhost:8080/api/bootstrap
-- 房间列表：http://localhost:8080/api/rooms
-- 健康检查：http://localhost:8080/healthz
-- 指标：http://localhost:8080/metrics
+| 页面 | 地址 | 说明 |
+|------|------|------|
+| 🏠 首页 | http://localhost:8080/ | 重定向到推流页 |
+| 📤 推流页 | http://localhost:8080/web/publisher.html | 浏览器推流 |
+| 📥 播放页 | http://localhost:8080/web/player.html | 观看直播 |
+| 📋 录制列表 | http://localhost:8080/web/records.html | 录制文件浏览 |
+| 📊 指标监控 | http://localhost:8080/metrics | Prometheus 指标 |
 
-## HTTP API
+---
+
+## 📦 安装
+
+### 二进制安装
+
+从 [GitHub Releases](https://github.com/LessUp/go-live/releases) 下载预编译二进制文件：
+
+```bash
+# Linux AMD64
+curl -LO https://github.com/LessUp/go-live/releases/latest/download/live-webrtc-go-linux-amd64
+chmod +x live-webrtc-go-linux-amd64
+./live-webrtc-go-linux-amd64
+```
+
+### 从源码构建
+
+```bash
+# 克隆并构建
+git clone https://github.com/LessUp/go-live.git
+cd go-live
+make build
+
+# 二进制位于 bin/server
+./bin/server
+```
+
+---
+
+## ⚙️ 配置
+
+通过环境变量进行配置：
+
+### 核心配置
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `HTTP_ADDR` | `:8080` | HTTP 监听地址 |
+| `ALLOWED_ORIGIN` | `*` | CORS 允许来源 |
+
+### 身份认证
+
+| 变量 | 说明 |
+|------|------|
+| `AUTH_TOKEN` | 全局认证令牌 |
+| `ROOM_TOKENS` | 房间级令牌，格式：`room1:tok1;room2:tok2` |
+| `JWT_SECRET` | JWT HMAC 签名密钥 |
+| `ADMIN_TOKEN` | 管理接口令牌 |
+
+### WebRTC/ICE
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `STUN_URLS` | `stun:stun.l.google.com:19302` | STUN 服务器 |
+| `TURN_URLS` | - | TURN 服务器 |
+| `TURN_USERNAME` | - | TURN 用户名 |
+| `TURN_PASSWORD` | - | TURN 密码 |
+
+### 录制功能
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `RECORD_ENABLED` | `0` | 启用录制（设为 `1` 启用） |
+| `RECORD_DIR` | `records` | 录制输出目录 |
+
+查看[完整配置指南](https://lessup.github.io/go-live/zh/usage.html#配置说明)了解所有选项。
+
+---
+
+## 🔌 API 参考
+
+### 流媒体接口
+
+| 方法 | 路径 | 认证 | 说明 |
+|------|------|------|------|
+| `POST` | `/api/whip/publish/{room}` | Token/JWT | 推流到房间 |
+| `POST` | `/api/whep/play/{room}` | Token/JWT | 从房间播放 |
+
+### 查询接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `POST` | `/api/whip/publish/{room}` | SDP Offer → Answer，建立推流连接 |
-| `POST` | `/api/whep/play/{room}` | SDP Offer → Answer，建立播放连接 |
-| `GET` | `/api/bootstrap` | 浏览器运行时配置 |
-| `GET` | `/api/rooms` | 房间列表与状态 |
-| `GET` | `/api/records` | 录制文件元数据 |
-| `POST` | `/api/admin/rooms/{room}/close` | 使用管理员鉴权关闭房间 |
+| `GET` | `/api/bootstrap` | 前端运行时配置 |
+| `GET` | `/api/rooms` | 活跃房间列表 |
+| `GET` | `/api/records` | 录制文件列表 |
+
+### 管理接口
+
+| 方法 | 路径 | 认证 | 说明 |
+|------|------|------|------|
+| `POST` | `/api/admin/rooms/{room}/close` | Admin Token | 强制关闭房间 |
+
+### 健康与监控
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
 | `GET` | `/healthz` | 健康检查 |
 | `GET` | `/metrics` | Prometheus 指标 |
 
-房间名限制为 `A-Z a-z 0-9 _ -`，最大长度 64。
+查看[完整 API 文档](https://lessup.github.io/go-live/zh/api.html)了解详情。
 
-## 关键环境变量
+---
 
-| 变量 | 默认值 | 说明 |
-|---|---|---|
-| `HTTP_ADDR` | `:8080` | HTTP 监听地址 |
-| `ALLOWED_ORIGIN` | `*` | 允许的 CORS 来源 |
-| `AUTH_TOKEN` | 空 | 全局令牌 |
-| `ROOM_TOKENS` | 空 | 房间级令牌，格式 `room1:tok1;room2:tok2` |
-| `JWT_SECRET` | 空 | HMAC JWT 密钥 |
-| `JWT_AUDIENCE` | 空 | 设置后要求 JWT audience 匹配 |
-| `ADMIN_TOKEN` | 空 | 管理接口令牌 |
-| `STUN_URLS` | Google STUN | STUN 列表 |
-| `TURN_URLS` | 空 | TURN 列表 |
-| `TURN_USERNAME` | 空 | TURN 用户名 |
-| `TURN_PASSWORD` | 空 | TURN 密码 |
-| `RECORD_ENABLED` | `0` | 设为 `1` 启用录制 |
-| `RECORD_DIR` | `records` | 录制目录 |
-| `UPLOAD_RECORDINGS` | `0` | 启用对象存储上传 |
-| `DELETE_RECORDING_AFTER_UPLOAD` | `0` | 上传成功后删除本地文件 |
-| `S3_ENDPOINT` | 空 | S3 / MinIO 地址 |
-| `S3_REGION` | 空 | S3 区域 |
-| `S3_BUCKET` | 空 | 目标桶 |
-| `S3_ACCESS_KEY` | 空 | Access Key |
-| `S3_SECRET_KEY` | 空 | Secret Key |
-| `S3_USE_SSL` | `1` | 是否启用 SSL |
-| `S3_PATH_STYLE` | `0` | 是否使用 path-style |
-| `S3_PREFIX` | 空 | 上传对象前缀 |
-| `MAX_SUBS_PER_ROOM` | `0` | 每房间订阅者上限 |
-| `RATE_LIMIT_RPS` | `0` | 每 IP 限流速率 |
-| `RATE_LIMIT_BURST` | `0` | 限流突发容量 |
-| `TLS_CERT_FILE` | 空 | TLS 证书路径 |
-| `TLS_KEY_FILE` | 空 | TLS 私钥路径 |
-| `PPROF` | `0` | 预留调试配置 |
+## 📚 文档
 
-## 开发与验证
+| 文档 | 说明 |
+|------|------|
+| [English Docs](https://lessup.github.io/go-live/en/) | 英文完整文档 |
+| [中文文档](https://lessup.github.io/go-live/zh/) | 中文完整文档 |
+| [使用指南](https://lessup.github.io/go-live/zh/usage.html) | 本地开发、Docker 部署、故障排除 |
+| [设计说明](https://lessup.github.io/go-live/zh/design.html) | 系统架构和模块详解 |
+| [API 参考](https://lessup.github.io/go-live/zh/api.html) | 完整 HTTP API 文档 |
 
-常用命令：
+---
+
+## 🛠️ 开发
+
+### Makefile 命令
 
 ```bash
-make build
-make fmt
-make lint
-make security
-make test
-make test-all
-make coverage
-make ci
+make build      # 编译二进制到 bin/
+make test       # 运行所有测试
+make lint       # 运行代码检查
+make security   # 运行安全扫描
+make coverage   # 生成覆盖率报告
+make ci         # 完整 CI 流水线
 ```
 
-默认本地验证（`make test`）会运行：
+### 运行测试
 
-- 单元测试
-- 集成测试
-- 安全测试
+```bash
+# 单元测试
+make test-unit
 
-`make test-all` 额外运行：
+# 集成测试
+make test-integration
 
-- e2e 测试
-- performance 测试
+# 所有测试
+make test-all
+```
 
-## 录制行为
+---
 
-- `/api/records` 返回本地录制文件 JSON 列表
-- 若 `RECORD_DIR` 不存在，则返回空数组，不再返回 500
-- 仅当启用录制时才会挂载静态 `/records/` 目录访问
+## 🐳 Docker 部署
 
-## 容器运行
+### 构建镜像
 
 ```bash
 docker build -t live-webrtc-go:latest .
 ```
 
+### Docker Compose
+
+```bash
+docker compose up -d
+```
+
+### 完整配置示例
+
 ```bash
 docker run --rm -p 8080:8080 \
+  -e AUTH_TOKEN=mysecret \
   -e RECORD_ENABLED=1 \
   -e RECORD_DIR=/records \
-  -v "$PWD/records:/records" \
+  -v $(pwd)/records:/records \
   live-webrtc-go:latest
 ```
 
-## 许可协议
+查看 [Docker 部署指南](https://lessup.github.io/go-live/zh/usage.html#docker-部署)了解更多详情。
 
-MIT License
+---
+
+## 🤝 参与贡献
+
+我们欢迎各种形式的贡献！请查看我们的[贡献指南](CONTRIBUTING.md)了解详情。
+
+- [贡献指南](CONTRIBUTING.md)
+- [行为准则](CODE_OF_CONDUCT.md)
+- [安全策略](SECURITY.md)
+
+---
+
+## 📄 许可协议
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+---
+
+## 🔗 相关链接
+
+- [GitHub 仓库](https://github.com/LessUp/go-live)
+- [问题反馈](https://github.com/LessUp/go-live/issues)
+- [版本发布](https://github.com/LessUp/go-live/releases)
+- [Pion WebRTC](https://github.com/pion/webrtc)
+
+---
+
+<div align="center">
+
+**[⬆ 回到顶部](#live-webrtc-go)**
+
+Made with ❤️ by [LessUp](https://github.com/LessUp)
+
+</div>

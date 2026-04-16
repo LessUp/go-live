@@ -1,37 +1,41 @@
 ---
 layout: default
 title: 使用指南
+nav_order: 2
+lang: zh
 ---
 
 # 使用指南
 
 本文档详细介绍 live-webrtc-go 的本地开发、容器部署、API 使用和故障排除。
 
+{: .no_toc }
+
 ## 目录
 
-- [环境要求](#环境要求)
-- [本地开发](#本地开发)
-- [配置详解](#配置详解)
-- [Docker 部署](#docker-部署)
-- [Kubernetes 部署](#kubernetes-部署)
-- [API 使用示例](#api-使用示例)
-- [前端集成](#前端集成)
-- [故障排除](#故障排除)
+{: .no_toc .text-delta }
+
+1. TOC
+{:toc}
+
+---
 
 ## 环境要求
 
-| 依赖 | 版本 | 说明 |
-|------|------|------|
+| 依赖项 | 版本 | 说明 |
+|--------|------|------|
 | Go | 1.22+ | 编译运行必需 |
 | Docker | 20.10+ | 可选，容器化部署 |
 | Docker Compose | 2.0+ | 可选，多容器编排 |
-| 浏览器 | Chrome 90+/Firefox 88+ | WebRTC 支持 |
+| 浏览器 | Chrome 90+/Firefox 88+ | 需要 WebRTC 支持 |
 
 ### WebRTC 端口要求
 
 如果在 NAT 环境下使用，需要：
 - 配置 STUN/TURN 服务器
 - 确保 UDP 端口未被防火墙阻止
+
+---
 
 ## 本地开发
 
@@ -52,7 +56,7 @@ go run ./cmd/server
 ### 方式二：使用开发脚本（推荐）
 
 ```bash
-# 基础启动（加载 .env.local，设置缓存目录）
+# 基础启动（加载 .env.local 如存在）
 ./scripts/start.sh
 
 # 启动前执行 go mod tidy
@@ -109,7 +113,9 @@ curl http://localhost:8080/api/rooms
 curl http://localhost:8080/api/bootstrap | jq
 ```
 
-## 配置详解
+---
+
+## 配置说明
 
 ### 核心配置
 
@@ -163,11 +169,11 @@ TURN_PASSWORD=mypassword
 | `DELETE_RECORDING_AFTER_UPLOAD` | `0` | 上传后删除本地文件 |
 | `S3_ENDPOINT` | - | S3/MinIO 端点地址 |
 | `S3_REGION` | - | S3 区域 |
-| `S3_BUCKET` | - | 目标存储桶 |
+| `S3_BUCKET` | - | 目标存储桶名称 |
 | `S3_ACCESS_KEY` | - | Access Key ID |
 | `S3_SECRET_KEY` | - | Secret Access Key |
 | `S3_USE_SSL` | `1` | 使用 HTTPS 连接 |
-| `S3_PATH_STYLE` | `0` | Path-style 寻址 |
+| `S3_PATH_STYLE` | `0` | 使用 path-style 寻址 |
 | `S3_PREFIX` | - | 对象键前缀 |
 
 **MinIO 示例**：
@@ -204,7 +210,9 @@ TLS_KEY_FILE=/etc/ssl/key.pem
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `PPROF` | `0` | 启用 pprof 端点 |
-| `OTEL_SERVICE_NAME` | `live-webrtc-go` | OpenTelemetry 服务名 |
+| `OTEL_SERVICE_NAME` | `live-webrtc-go` | OpenTelemetry 服务名称 |
+
+---
 
 ## Docker 部署
 
@@ -276,6 +284,8 @@ services:
 docker compose up -d
 ```
 
+---
+
 ## Kubernetes 部署
 
 ### Deployment 示例
@@ -333,6 +343,8 @@ spec:
   type: LoadBalancer
 ```
 
+---
+
 ## API 使用示例
 
 ### 使用 curl
@@ -365,7 +377,7 @@ curl -X POST \
 1. 打开 OBS → 设置 → 流
 2. 服务选择 "WHIP"
 3. 服务器输入: `http://localhost:8080/api/whip/publish/myroom`
-4. 伯尔乐令牌输入: `your-token`（如配置了认证）
+4. 令牌输入: `your-token`（如配置了认证）
 5. 开始推流
 
 ### 使用 JavaScript 播放
@@ -407,6 +419,8 @@ const answer = await response.text();
 await pc.setRemoteDescription({ type: 'answer', sdp: answer });
 ```
 
+---
+
 ## 前端集成
 
 ### Bootstrap API 响应
@@ -435,6 +449,8 @@ await pc.setRemoteDescription({ type: 'answer', sdp: answer });
 Authorization: Bearer <token>
 X-Auth-Token: <token>
 ```
+
+---
 
 ## 故障排除
 
@@ -537,6 +553,8 @@ aws s3 ls --endpoint-url http://minio:9000
 curl http://localhost:8080/metrics | grep live_
 ```
 
+---
+
 ## 开发命令参考
 
 ```bash
@@ -562,7 +580,10 @@ make coverage
 open coverage.html
 ```
 
+---
+
 ## 相关文档
 
 - [设计说明](design.md) - 架构和模块详解
+- [API 参考](api.md) - 完整 API 文档
 - [GitHub 仓库](https://github.com/LessUp/go-live) - 源代码

@@ -134,21 +134,16 @@ func tokenMatch(r *http.Request, expect string) bool {
 
 func parseRoomClaims(tokenString, secret string, audience string) (*roomClaims, bool) {
 	claims := &roomClaims{}
-	parser := jwt.NewParser(
+	parserOpts := []jwt.ParserOption{
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg(), jwt.SigningMethodHS384.Alg(), jwt.SigningMethodHS512.Alg()}),
 		jwt.WithExpirationRequired(),
 		jwt.WithIssuedAt(),
-		jwt.WithLeeway(30*time.Second),
-	)
-	if audience != "" {
-		parser = jwt.NewParser(
-			jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg(), jwt.SigningMethodHS384.Alg(), jwt.SigningMethodHS512.Alg()}),
-			jwt.WithExpirationRequired(),
-			jwt.WithIssuedAt(),
-			jwt.WithAudience(audience),
-			jwt.WithLeeway(30*time.Second),
-		)
+		jwt.WithLeeway(30 * time.Second),
 	}
+	if audience != "" {
+		parserOpts = append(parserOpts, jwt.WithAudience(audience))
+	}
+	parser := jwt.NewParser(parserOpts...)
 	token, err := parser.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})

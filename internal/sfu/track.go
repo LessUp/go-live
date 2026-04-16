@@ -8,6 +8,8 @@ import (
 	"live-webrtc-go/internal/metrics"
 )
 
+const mtuSize = 1500 // Maximum Transmission Unit size for RTP packets
+
 // rtpWriter 抽象录制写入器接口。
 type rtpWriter interface {
 	WriteRTP(*rtp.Packet) error
@@ -64,7 +66,7 @@ func (f *trackFanout) attachToSubscriber(pc *webrtc.PeerConnection) {
 		return
 	}
 	go func() {
-		buf := make([]byte, 1500)
+		buf := make([]byte, mtuSize)
 		for {
 			if _, _, err := sender.Read(buf); err != nil {
 				return
@@ -133,7 +135,7 @@ func (f *trackFanout) close() string {
 
 // readLoop 持续从远端 Track 读取 RTP，并同步写入录制和所有订阅者。
 func (f *trackFanout) readLoop() {
-	buf := make([]byte, 1500)
+	buf := make([]byte, mtuSize)
 	for {
 		select {
 		case <-f.closed:
