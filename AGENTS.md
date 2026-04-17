@@ -184,8 +184,6 @@ Go files are automatically formatted with `gofmt -s` after Write/Edit operations
 │   ├── en/               # English docs
 │   ├── zh/               # Chinese docs
 │   └── changelog/        # Changelog templates & release notes
-├── docs-v2/              # Archived Astro-based docs (deprecated)
-├── web/                  # Frontend source files
 └── .github/              # GitHub workflows and templates
 ```
 
