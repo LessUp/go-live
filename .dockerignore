@@ -15,4 +15,4 @@
 **/test/reports
 **/.changelog
 **/docs-v2
-**/server
+/server
