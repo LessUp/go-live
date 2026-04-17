@@ -1,5 +1,6 @@
-# live-webrtc-go
+# Go-Live
 
+[![CI](https://github.com/LessUp/go-live/actions/workflows/ci.yml/badge.svg)](https://github.com/LessUp/go-live/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/LessUp/go-live)](https://goreportcard.com/report/github.com/LessUp/go-live)
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
@@ -16,12 +17,13 @@ A lightweight, high-performance **WebRTC SFU** (Selective Forwarding Unit) serve
 ## 📋 Table of Contents
 
 - [Features](#-features)
+- [Architecture](#️-architecture)
 - [Quick Start](#-quick-start)
 - [Installation](#-installation)
-- [Configuration](#-configuration)
+- [Configuration](#️-configuration)
 - [API Reference](#-api-reference)
 - [Documentation](#-documentation)
-- [Development](#-development)
+- [Development](#️-development)
 - [Docker Deployment](#-docker-deployment)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -33,12 +35,13 @@ A lightweight, high-performance **WebRTC SFU** (Selective Forwarding Unit) serve
 | Feature | Description |
 |---------|-------------|
 | 🎥 **WHIP/WHEP Protocol** | Standard HTTP-based WebRTC ingest and playback, compatible with OBS and modern browsers |
-| 🏠 **Room-based SFU** | Single publisher, multiple subscribers per room with efficient media forwarding |
+| 🏠 **Room-based SFU** | Single publisher, multiple subscribers per room with efficient RTP forwarding |
 | 🔐 **Flexible Authentication** | Global token, per-room tokens, or JWT with role-based access control |
 | 📹 **Recording & Upload** | VP8/VP9 → IVF, Opus → OGG with automatic S3/MinIO upload |
 | 📊 **Full Observability** | Prometheus metrics, OpenTelemetry tracing, health check endpoints |
 | 🐳 **Cloud Native** | Docker and Docker Compose support, Kubernetes-ready |
 | 🌐 **Embedded Web UI** | Built-in publisher and player pages, ready to use out of the box |
+| ⚡ **High Performance** | Low-latency media forwarding with Go's concurrent programming model |
 
 ---
 
@@ -68,27 +71,22 @@ A lightweight, high-performance **WebRTC SFU** (Selective Forwarding Unit) serve
                         └────────────────────────────────────┘
 ```
 
+### Request Processing Chain
+
+```
+HTTP Request → CORS → Rate Limiter → Auth → Handler → SFU Room
+```
+
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Go 1.22+ (for building from source)
-- Or Docker (for containerized deployment)
-
-### Run from Source
+### Run from Source (30 seconds)
 
 ```bash
-# Clone the repository
 git clone https://github.com/LessUp/go-live.git
 cd go-live
-
-# Run directly
 go run ./cmd/server
-
-# Or use the development script
-./scripts/start.sh
 ```
 
 ### Run with Docker
@@ -101,17 +99,17 @@ docker run --rm -p 8080:8080 ghcr.io/lessup/go-live:latest
 
 | Page | URL | Description |
 |------|-----|-------------|
-| 🏠 Home | http://localhost:8080/ | Redirects to publisher |
-| 📤 Publisher | http://localhost:8080/web/publisher.html | Browser-based streaming |
-| 📥 Player | http://localhost:8080/web/player.html | Watch live streams |
-| 📋 Records | http://localhost:8080/web/records.html | Recording browser |
-| 📊 Metrics | http://localhost:8080/metrics | Prometheus metrics |
+| 🏠 Home | `http://localhost:8080/` | Frontend dashboard |
+| 📤 Publisher | `http://localhost:8080/web/publisher.html` | Browser-based streaming |
+| 📥 Player | `http://localhost:8080/web/player.html` | Watch live streams |
+| 📋 Records | `http://localhost:8080/web/records.html` | Recording browser |
+| 📊 Metrics | `http://localhost:8080/metrics` | Prometheus metrics |
 
 ---
 
 ## 📦 Installation
 
-### Binary Installation
+### Binary Download
 
 Download pre-built binaries from [GitHub Releases](https://github.com/LessUp/go-live/releases):
 
@@ -125,12 +123,9 @@ chmod +x live-webrtc-go-linux-amd64
 ### Build from Source
 
 ```bash
-# Clone and build
 git clone https://github.com/LessUp/go-live.git
 cd go-live
 make build
-
-# Binary will be at bin/server
 ./bin/server
 ```
 
@@ -138,7 +133,28 @@ make build
 
 ## ⚙️ Configuration
 
-Configuration is via environment variables:
+Configuration is via environment variables. Create an `.env.local` file:
+
+```bash
+# Core
+HTTP_ADDR=:8080
+ALLOWED_ORIGIN=*
+
+# Authentication (optional)
+AUTH_TOKEN=your-secret-token
+ADMIN_TOKEN=your-admin-token
+
+# Recording (optional)
+RECORD_ENABLED=1
+RECORD_DIR=records
+
+# S3 Upload (optional)
+UPLOAD_RECORDINGS=1
+S3_ENDPOINT=minio.example.com:9000
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_BUCKET=recordings
+```
 
 ### Core Settings
 
@@ -161,7 +177,7 @@ Configuration is via environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `STUN_URLS` | `stun:stun.l.google.com:19302` | STUN servers |
-| `TURN_URLS` | - | TURN servers |
+| `TURN_URLS` | - | TURN servers (for NAT environments) |
 | `TURN_USERNAME` | - | TURN username |
 | `TURN_PASSWORD` | - | TURN password |
 
@@ -172,7 +188,7 @@ Configuration is via environment variables:
 | `RECORD_ENABLED` | `0` | Enable recording (`1` to enable) |
 | `RECORD_DIR` | `records` | Recording output directory |
 
-See [full configuration guide](https://lessup.github.io/go-live/en/usage.html#configuration-reference) for all options.
+> 💡 See [full configuration guide](https://lessup.github.io/go-live/en/usage.html#configuration-reference) for all options including S3 upload, rate limiting, TLS, and debug settings.
 
 ---
 
@@ -203,22 +219,41 @@ See [full configuration guide](https://lessup.github.io/go-live/en/usage.html#co
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/healthz` | Health check |
+| `GET` | `/healthz` | Health check (returns `ok`) |
 | `GET` | `/metrics` | Prometheus metrics |
 
-See [complete API documentation](https://lessup.github.io/go-live/en/api.html) for details.
+### Quick Test with curl
+
+```bash
+# Health check
+curl http://localhost:8080/healthz
+
+# List rooms
+curl http://localhost:8080/api/rooms
+
+# Bootstrap config
+curl http://localhost:8080/api/bootstrap | jq
+
+# Close room (admin)
+curl -X POST \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  http://localhost:8080/api/admin/rooms/myroom/close
+```
+
+> 💡 See [complete API documentation](https://lessup.github.io/go-live/en/api.html) for request/response formats and examples.
 
 ---
 
 ## 📚 Documentation
 
-| Document | Description |
-|----------|-------------|
-| [English Docs](https://lessup.github.io/go-live/en/) | Complete documentation in English |
-| [中文文档](https://lessup.github.io/go-live/zh/) | 完整中文文档 |
-| [Usage Guide](https://lessup.github.io/go-live/en/usage.html) | Local development, Docker deployment, troubleshooting |
-| [Design Docs](https://lessup.github.io/go-live/en/design.html) | System architecture and module details |
-| [API Reference](https://lessup.github.io/go-live/en/api.html) | Complete HTTP API documentation |
+| Document | Link |
+|----------|------|
+| English Docs | https://lessup.github.io/go-live/en/ |
+| 中文文档 | https://lessup.github.io/go-live/zh/ |
+| Usage Guide | https://lessup.github.io/go-live/en/usage.html |
+| Design Docs | https://lessup.github.io/go-live/en/design.html |
+| API Reference | https://lessup.github.io/go-live/en/api.html |
+| Changelog | https://lessup.github.io/go-live/changelog.html |
 
 ---
 
@@ -227,26 +262,42 @@ See [complete API documentation](https://lessup.github.io/go-live/en/api.html) f
 ### Makefile Commands
 
 ```bash
-make build      # Build binary to bin/
-make test       # Run all tests
-make lint       # Run linters
-make security   # Run security scan
-make coverage   # Generate coverage report
-make ci         # Full CI pipeline
+make build       # Build binary to bin/
+make test        # Run all tests (unit + integration + security)
+make test-unit   # Run unit tests only
+make test-all    # Run all tests including e2e and performance
+make lint        # Run linters (gofmt + go vet + golangci-lint)
+make security    # Run gosec security scan
+make coverage    # Generate coverage report
+make ci          # Full CI pipeline (lint + test + security)
 ```
 
-### Running Tests
+### Project Structure
 
-```bash
-# Unit tests
-make test-unit
-
-# Integration tests
-make test-integration
-
-# All tests
-make test-all
 ```
+├── cmd/server/           # Application entry point
+│   ├── main.go           # HTTP server initialization
+│   └── web/              # Embedded static files
+├── internal/
+│   ├── api/              # HTTP handlers and routing
+│   ├── config/           # Configuration management
+│   ├── sfu/              # WebRTC SFU core
+│   ├── metrics/          # Prometheus metrics
+│   ├── otel/             # OpenTelemetry tracing
+│   ├── uploader/         # S3/MinIO upload
+│   └── testutil/         # Test utilities
+├── specs/                # Single Source of Truth (Specs)
+├── test/                 # Test implementations
+└── docs/                 # Documentation
+```
+
+### Supported Codecs
+
+| Codec | Type | Format |
+|-------|------|--------|
+| VP8 | Video | IVF |
+| VP9 | Video | IVF |
+| Opus | Audio | OGG |
 
 ---
 
@@ -258,24 +309,50 @@ make test-all
 docker build -t live-webrtc-go:latest .
 ```
 
+### Basic Run
+
+```bash
+docker run --rm -p 8080:8080 live-webrtc-go:latest
+```
+
 ### Docker Compose
+
+```yaml
+services:
+  live-webrtc:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - RECORD_ENABLED=1
+      - RECORD_DIR=/records
+    volumes:
+      - ./records:/records
+    restart: unless-stopped
+```
 
 ```bash
 docker compose up -d
 ```
 
-### Full Configuration Example
+### Full Configuration
 
 ```bash
 docker run --rm -p 8080:8080 \
   -e AUTH_TOKEN=mysecret \
   -e RECORD_ENABLED=1 \
   -e RECORD_DIR=/records \
+  -e UPLOAD_RECORDINGS=1 \
+  -e S3_ENDPOINT=minio:9000 \
+  -e S3_ACCESS_KEY=minioadmin \
+  -e S3_SECRET_KEY=minioadmin \
+  -e S3_BUCKET=recordings \
   -v $(pwd)/records:/records \
   live-webrtc-go:latest
 ```
 
-See [Docker deployment guide](https://lessup.github.io/go-live/en/usage.html#docker-deployment) for more details.
+> 💡 See [Docker deployment guide](https://lessup.github.io/go-live/en/usage.html#docker-deployment) for Kubernetes examples and production best practices.
 
 ---
 
@@ -286,6 +363,7 @@ Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Security Policy](SECURITY.md)
+- [Spec-Driven Development](AGENTS.md)
 
 ---
 
@@ -299,14 +377,15 @@ This project is licensed under the [MIT License](LICENSE).
 
 - [GitHub Repository](https://github.com/LessUp/go-live)
 - [Issue Tracker](https://github.com/LessUp/go-live/issues)
-- [GitHub Releases](https://github.com/LessUp/go-live/releases)
+- [Releases](https://github.com/LessUp/go-live/releases)
+- [Documentation](https://lessup.github.io/go-live/)
 - [Pion WebRTC](https://github.com/pion/webrtc)
 
 ---
 
 <div align="center">
 
-**[⬆ Back to Top](#live-webrtc-go)**
+**[⬆ Back to Top](#go-live)**
 
 Made with ❤️ by [LessUp](https://github.com/LessUp)
 
