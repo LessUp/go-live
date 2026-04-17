@@ -1,0 +1,358 @@
+/* Go-Live Docs - Code Block Styles */
+
+/* ================================================
+   Expressive Code 主题定制
+   ================================================ */
+
+/* 基础代码块 */
+.expressive-code {
+  margin: 1.5rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.expressive-code pre {
+  margin: 0 !important;
+}
+
+/* 代码块头部 */
+.expressive-code .frame {
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* 标题栏 */
+.expressive-code .frame.has-title .header {
+  background: linear-gradient(180deg, #2d333b, #22272e);
+  border-bottom: 1px solid #444c56;
+  padding: 0.75rem 1rem;
+}
+
+.expressive-code .frame.has-title .title {
+  color: #adbac7;
+  font-family: var(--sl-font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.expressive-code .frame.has-title .title::before {
+  content: '📄 ';
+  margin-right: 0.25rem;
+}
+
+/* 代码区域 */
+.expressive-code .frame pre {
+  background: #22272e;
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* 行号 */
+.expressive-code .line-numbers {
+  color: #636e7b;
+  padding-right: 1.5rem;
+  user-select: none;
+}
+
+/* 复制按钮 */
+.expressive-code .copy-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.5rem;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.expressive-code:hover .copy-button,
+.expressive-code:focus-within .copy-button {
+  opacity: 1;
+}
+
+.expressive-code .copy-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.expressive-code .copy-button.copied {
+  background: rgba(0, 173, 216, 0.3);
+  border-color: var(--sl-color-brand-primary);
+}
+
+/* 高亮行 */
+.expressive-code .highlighted-line {
+  background: rgba(0, 173, 216, 0.15);
+  border-left: 3px solid var(--sl-color-brand-primary);
+  margin-left: -1rem;
+  padding-left: calc(1rem - 3px);
+}
+
+/* 差异模式 */
+.expressive-code .diff.add {
+  background: rgba(46, 160, 67, 0.15);
+  border-left: 3px solid #3fb950;
+}
+
+.expressive-code .diff.add::before {
+  content: '+';
+  color: #3fb950;
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+.expressive-code .diff.remove {
+  background: rgba(248, 81, 73, 0.15);
+  border-left: 3px solid #f85149;
+  text-decoration: line-through;
+  text-decoration-color: #f85149;
+}
+
+.expressive-code .diff.remove::before {
+  content: '-';
+  color: #f85149;
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+/* 终端输出块 */
+.expressive-code .terminal {
+  background: #0d1117;
+}
+
+.expressive-code .terminal .header {
+  background: linear-gradient(180deg, #21262d, #161b22);
+  padding: 0.5rem 1rem;
+}
+
+.expressive-code .terminal .header::before {
+  content: '● ● ●';
+  color: #484f58;
+  letter-spacing: 0.5rem;
+  font-size: 0.6rem;
+}
+
+.expressive-code .terminal pre {
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+/* 命令行提示符 */
+.expressive-code code .line[data-prompt]::before {
+  content: attr(data-prompt);
+  color: #3fb950;
+  margin-right: 0.5rem;
+  font-weight: 600;
+}
+
+/* 代码注释 */
+.expressive-code .token.comment {
+  color: #8b949e;
+  font-style: italic;
+}
+
+/* 关键字 */
+.expressive-code .token.keyword {
+  color: #ff7b72;
+  font-weight: 500;
+}
+
+/* 字符串 */
+.expressive-code .token.string {
+  color: #a5d6ff;
+}
+
+/* 函数 */
+.expressive-code .token.function {
+  color: #d2a8ff;
+}
+
+/* 数字 */
+.expressive-code .token.number {
+  color: #79c0ff;
+}
+
+/* 运算符 */
+.expressive-code .token.operator {
+  color: #ff7b72;
+}
+
+/* 明亮模式代码块 */
+[data-theme='light'] .expressive-code .frame pre {
+  background: #f6f8fa;
+  color: #24292f;
+}
+
+[data-theme='light'] .expressive-code .frame.has-title .header {
+  background: linear-gradient(180deg, #f3f4f6, #e5e7eb);
+  border-bottom: 1px solid #d1d5da;
+}
+
+[data-theme='light'] .expressive-code .frame.has-title .title {
+  color: #374151;
+}
+
+[data-theme='light'] .expressive-code .token.comment {
+  color: #6e7781;
+}
+
+[data-theme='light'] .expressive-code .token.keyword {
+  color: #cf222e;
+}
+
+[data-theme='light'] .expressive-code .token.string {
+  color: #0a3069;
+}
+
+[data-theme='light'] .expressive-code .token.function {
+  color: #8250df;
+}
+
+[data-theme='light'] .expressive-code .token.number {
+  color: #0550ae;
+}
+
+[data-theme='light'] .expressive-code .line-numbers {
+  color: #8c959f;
+}
+
+[data-theme='light'] .expressive-code .highlighted-line {
+  background: rgba(0, 173, 216, 0.1);
+}
+
+/* ================================================
+   内联代码特殊样式
+   ================================================ */
+
+/* 文件路径 */
+code.file-path {
+  background: rgba(0, 173, 216, 0.1);
+  color: var(--sl-color-brand-primary);
+  border-color: rgba(0, 173, 216, 0.3);
+}
+
+/* 环境变量 */
+code.env-var {
+  background: rgba(255, 107, 107, 0.1);
+  color: var(--sl-color-brand-accent);
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+/* HTTP 方法 */
+code.http-method {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8em;
+}
+
+code.http-method.get {
+  color: #3fb950;
+  background: rgba(46, 160, 67, 0.1);
+}
+
+code.http-method.post {
+  color: #a371f7;
+  background: rgba(163, 113, 247, 0.1);
+}
+
+code.http-method.put {
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.1);
+}
+
+code.http-method.delete {
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.1);
+}
+
+/* ================================================
+   代码分组标签
+   ================================================ */
+
+.code-tabs {
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+.code-tabs-header {
+  display: flex;
+  background: var(--sl-color-hairline-shade);
+  border-bottom: 1px solid var(--sl-color-hairline);
+  padding: 0.5rem;
+  gap: 0.25rem;
+}
+
+.code-tab {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--sl-color-gray-5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+}
+
+.code-tab:hover {
+  color: var(--sl-color-gray-6);
+  background: var(--sl-color-bg);
+}
+
+.code-tab.active {
+  color: var(--sl-color-brand-primary);
+  background: var(--sl-color-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.code-tabs-content {
+  background: var(--sl-color-bg);
+}
+
+.code-panel {
+  display: none;
+}
+
+.code-panel.active {
+  display: block;
+}
+
+/* ================================================
+   输出/结果块
+   ================================================ */
+
+.output-block {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-family: var(--sl-font-mono);
+  font-size: 0.875rem;
+  color: #e6edf3;
+  overflow-x: auto;
+}
+
+.output-block::before {
+  content: '$ Output';
+  display: block;
+  color: #8b949e;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 0.5rem;
+}
+
+[data-theme='light'] .output-block {
+  background: #f6f8fa;
+  border-color: #e1e4e8;
+  color: #24292f;
+}
+
+[data-theme='light'] .output-block::before {
+  color: #6e7781;
+  border-color: #e1e4e8;
+}

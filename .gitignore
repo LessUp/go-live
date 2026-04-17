@@ -40,3 +40,7 @@ web/dist/
 
 # Recording output
 records/
+
+# Test artifacts
+test/reports/
+server

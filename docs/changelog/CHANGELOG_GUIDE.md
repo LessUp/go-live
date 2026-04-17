@@ -1,102 +1,102 @@
-# Changelog 编写指南
+# Changelog Writing Guide
 
-本指南详细说明如何为 live-webrtc-go 项目编写高质量的 Changelog 条目。
-
----
-
-## 目录
-
-- [Changelog 格式](#changelog-格式)
-- [分类定义](#分类定义)
-- [编写规范](#编写规范)
-- [示例](#示例)
-- [术语表](#术语表)
+This guide explains how to write high-quality changelog entries for the live-webrtc-go project.
 
 ---
 
-## Changelog 格式
+## Table of Contents
 
-本项目遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 规范，并采用 [Semantic Versioning](https://semver.org/) 进行版本管理。
+- [Changelog Format](#changelog-format)
+- [Category Definitions](#category-definitions)
+- [Writing Guidelines](#writing-guidelines)
+- [Examples](#examples)
+- [Glossary](#glossary)
 
-### 基本结构
+---
+
+## Changelog Format
+
+This project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) specification and uses [Semantic Versioning](https://semver.org/) for version management.
+
+### Basic Structure
 
 ```markdown
-## [版本号] - YYYY-MM-DD
+## [Version] - YYYY-MM-DD
 
 ### Added
-- 新功能描述
+- Feature description
 
 ### Changed
-- 变更描述
+- Change description
 
 ### Deprecated
-- 弃用功能描述
+- Deprecated feature description
 
 ### Removed
-- 移除功能描述
+- Removed feature description
 
 ### Fixed
-- 修复描述
+- Fix description
 
 ### Security
-- 安全修复描述
+- Security fix description
 ```
 
 ---
 
-## 分类定义
+## Category Definitions
 
-| 分类 | 用途 | 示例 |
-|------|------|------|
-| **Added** | 新增功能、API、配置选项 | 添加 WebSocket 支持、新增指标 |
-| **Changed** | 现有功能的变更、改进 | 优化性能、改进错误处理 |
-| **Deprecated** | 即将移除的功能 | 标记废弃的 API 端点 |
-| **Removed** | 已移除的功能 | 删除旧的配置选项 |
-| **Fixed** | Bug 修复 | 修复内存泄漏、修复竞态条件 |
-| **Security** | 安全修复 | 修复漏洞、更新依赖 |
+| Category | Purpose | Example |
+|----------|---------|---------|
+| **Added** | New features, APIs, config options | Add WebSocket support, new metrics |
+| **Changed** | Existing feature changes, improvements | Optimize performance, improve error handling |
+| **Deprecated** | Soon-to-be-removed features | Mark deprecated API endpoint |
+| **Removed** | Removed features | Delete old config option |
+| **Fixed** | Bug fixes | Fix memory leak, fix race condition |
+| **Security** | Security fixes | Fix vulnerability, update dependencies |
 
 ---
 
-## 编写规范
+## Writing Guidelines
 
-### 1. 使用祈使语气
+### 1. Use Imperative Mood
 
-使用命令式语气，如 "Add" 而非 "Added"、"Fix" 而非 "Fixed"。
+Use imperative mood, e.g., "Add" not "Added", "Fix" not "Fixed".
 
 ```markdown
 ✅ Add WebSocket support for real-time events
 ❌ Added WebSocket support for real-time events
 ```
 
-### 2. 首字母大写
+### 2. Capitalize First Letter
 
-每条条目首字母大写。
+Capitalize the first letter of each entry.
 
 ```markdown
 ✅ Add new feature
 ❌ add new feature
 ```
 
-### 3. 结尾不加句号
+### 3. No Trailing Period
 
-条目结尾不加句号（除非是完整句子）。
+Do not add a period at the end of entries (unless it's a complete sentence).
 
 ```markdown
 ✅ Add WebSocket support
 ❌ Add WebSocket support.
 ```
 
-### 4. 引用相关 Issue/PR
+### 4. Reference Related Issues/PRs
 
-在条目中引用相关的 Issue 或 PR 编号。
+Reference related issue or PR numbers in entries.
 
 ```markdown
 ✅ Fix memory leak in track fanout (#123)
 ```
 
-### 5. 分组相关变更
+### 5. Group Related Changes
 
-使用子标题对相关变更进行分组。
+Use subheadings to group related changes together.
 
 ```markdown
 ### Added
@@ -109,9 +109,9 @@
 - Add `/api/admin/rooms/{room}/stats` endpoint (#51)
 ```
 
-### 6.  Breaking Changes 标记
+### 6. Mark Breaking Changes
 
-对于破坏性变更，在条目前加 `**Breaking:**` 标记。
+For breaking changes, prefix entries with `**Breaking:**`.
 
 ```markdown
 ### Changed
@@ -123,9 +123,9 @@
 
 ---
 
-## 示例
+## Examples
 
-### 示例 1: 新功能发布
+### Example 1: Feature Release
 
 ```markdown
 ## [1.2.0] - 2025-04-15
@@ -160,7 +160,7 @@
 - Update golang.org/x/crypto to fix CVE-2025-XXXX (#90)
 ```
 
-### 示例 2: Bug 修复版本
+### Example 2: Bug Fix Release
 
 ```markdown
 ## [1.1.2] - 2025-03-28
@@ -171,7 +171,7 @@
 - Fix token comparison timing attack vulnerability (#83)
 ```
 
-### 示例 3: 破坏性变更
+### Example 3: Breaking Changes
 
 ```markdown
 ## [2.0.0] - 2025-06-01
@@ -193,20 +193,20 @@
 
 ---
 
-## 术语表
+## Glossary
 
-| 术语 | 说明 |
-|------|------|
-| **SFU** | Selective Forwarding Unit，选择性转发单元 |
-| **WHIP** | WebRTC-HTTP Ingestion Protocol，WebRTC HTTP 摄入协议 |
-| **WHEP** | WebRTC-HTTP Egress Protocol，WebRTC HTTP 流出协议 |
-| **RTP** | Real-time Transport Protocol，实时传输协议 |
-| **ICE** | Interactive Connectivity Establishment，交互式连接建立 |
-| **SDP** | Session Description Protocol，会话描述协议 |
+| Term | Description |
+|------|-------------|
+| **SFU** | Selective Forwarding Unit |
+| **WHIP** | WebRTC-HTTP Ingestion Protocol |
+| **WHEP** | WebRTC-HTTP Egress Protocol |
+| **RTP** | Real-time Transport Protocol |
+| **ICE** | Interactive Connectivity Establishment |
+| **SDP** | Session Description Protocol |
 
 ---
 
-## 相关链接
+## Related Links
 
 - [Keep a Changelog](https://keepachangelog.com/)
 - [Semantic Versioning](https://semver.org/)

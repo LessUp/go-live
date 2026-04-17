@@ -12,3 +12,7 @@
 **/vendor
 **/records
 **/.env*
+**/test/reports
+**/.changelog
+**/docs-v2
+**/server
