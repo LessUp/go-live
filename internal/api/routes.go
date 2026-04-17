@@ -45,8 +45,16 @@ func (h *HTTPHandlers) RegisterRoutes(mux *http.ServeMux, webFS fs.FS, recordDir
 
 	// API：房间列表、录制文件列表与前端运行时配置（GET）
 	mux.HandleFunc("/api/rooms", h.ServeRooms)
-	mux.HandleFunc("/api/records", h.ServeRecordsList)
 	mux.HandleFunc("/api/bootstrap", h.ServeBootstrap)
+
+	// 录制文件列表：需要管理员权限
+	mux.HandleFunc("/api/records", func(w http.ResponseWriter, r *http.Request) {
+		if !h.adminOK(r) {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		h.ServeRecordsList(w, r)
+	})
 
 	// 管理接口：关闭房间（POST /api/admin/rooms/{room}/close）
 	mux.HandleFunc("/api/admin/rooms/", func(w http.ResponseWriter, r *http.Request) {

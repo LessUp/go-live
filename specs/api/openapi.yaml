@@ -1,0 +1,342 @@
+openapi: 3.0.3
+info:
+  title: live-webrtc-go API
+  description: |
+    A lightweight, high-performance WebRTC SFU server supporting WHIP/WHEP protocols,
+    room-based relay, recording, and comprehensive observability.
+  version: 1.1.0
+  contact:
+    name: LessUp
+    url: https://github.com/LessUp/go-live
+  license:
+    name: MIT
+    url: https://github.com/LessUp/go-live/blob/master/LICENSE
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/whip/publish/{room}:
+    post:
+      summary: Publish stream to room (WHIP)
+      description: |
+        Publish a WebRTC stream to a named room via WHIP protocol.
+        Creates a PeerConnection and establishes the stream as the room's publisher.
+      operationId: publishStream
+      tags:
+        - Streaming
+      parameters:
+        - name: room
+          in: path
+          required: true
+          description: Room name (must match ^[A-Za-z0-9_-]{1,64}$)
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]{1,64}$"
+      requestBody:
+        required: true
+        content:
+          application/sdp:
+            schema:
+              type: string
+              description: SDP Offer
+      responses:
+        '200':
+          description: SDP Answer returned successfully
+          content:
+            application/sdp:
+              schema:
+                type: string
+                description: SDP Answer
+        '400':
+          description: Bad request (invalid room name, invalid SDP)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized (missing or invalid authentication)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden (subscriber limit reached)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - TokenAuth: []
+        - JWTAuth: []
+
+  /api/whep/play/{room}:
+    post:
+      summary: Play stream from room (WHEP)
+      description: |
+        Subscribe to a WebRTC stream in a named room via WHEP protocol.
+        Creates a PeerConnection and receives the publisher's stream via RTP.
+      operationId: playStream
+      tags:
+        - Streaming
+      parameters:
+        - name: room
+          in: path
+          required: true
+          description: Room name (must match ^[A-Za-z0-9_-]{1,64}$)
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]{1,64}$"
+      requestBody:
+        required: true
+        content:
+          application/sdp:
+            schema:
+              type: string
+              description: SDP Offer
+      responses:
+        '200':
+          description: SDP Answer returned successfully
+          content:
+            application/sdp:
+              schema:
+                type: string
+                description: SDP Answer
+        '400':
+          description: Bad request (invalid room name, invalid SDP)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized (missing or invalid authentication)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden (subscriber limit reached)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - TokenAuth: []
+        - JWTAuth: []
+
+  /api/bootstrap:
+    get:
+      summary: Frontend runtime configuration
+      description: |
+        Returns runtime configuration for frontend web clients.
+        No authentication required.
+      operationId: getBootstrap
+      tags:
+        - Query
+      responses:
+        '200':
+          description: Bootstrap configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wsURL:
+                    type: string
+                    description: WebSocket URL (if applicable)
+                  publishURL:
+                    type: string
+                    description: WHIP publish endpoint URL
+                  playURL:
+                    type: string
+                    description: WHEP play endpoint URL
+
+  /api/rooms:
+    get:
+      summary: List active rooms
+      description: |
+        Returns a list of all active rooms with publisher and subscriber counts.
+        No authentication required.
+      operationId: listRooms
+      tags:
+        - Query
+      responses:
+        '200':
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+
+  /api/records:
+    get:
+      summary: List recording files
+      description: |
+        Returns metadata for all recording files.
+        No authentication required.
+      operationId: listRecords
+      tags:
+        - Query
+      responses:
+        '200':
+          description: List of recordings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recording'
+
+  /api/admin/rooms/{room}/close:
+    post:
+      summary: Force close a room
+      description: |
+        Force closes a room, disconnecting all publishers and subscribers.
+        Requires admin authentication.
+      operationId: closeRoom
+      tags:
+        - Admin
+      parameters:
+        - name: room
+          in: path
+          required: true
+          description: Room name to close
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]{1,64}$"
+      responses:
+        '200':
+          description: Room closed successfully
+        '401':
+          description: Unauthorized (missing or invalid admin token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - AdminAuth: []
+
+  /healthz:
+    get:
+      summary: Health check
+      description: |
+        Returns server health status.
+        No authentication required.
+      operationId: healthCheck
+      tags:
+        - Health & Metrics
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: |
+        Returns Prometheus metrics in exposition format.
+        No authentication required.
+      operationId: getMetrics
+      tags:
+        - Health & Metrics
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error
+
+    Room:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Room name
+        hasPublisher:
+          type: boolean
+          description: Whether room has an active publisher
+        subscriberCount:
+          type: integer
+          description: Number of active subscribers
+        createdAt:
+          type: string
+          format: date-time
+          description: Room creation timestamp
+      required:
+        - name
+        - hasPublisher
+        - subscriberCount
+
+    Recording:
+      type: object
+      properties:
+        room:
+          type: string
+          description: Room name
+        trackID:
+          type: string
+          description: Track ID
+        filename:
+          type: string
+          description: Recording filename
+        size:
+          type: integer
+          description: File size in bytes
+        createdAt:
+          type: string
+          format: date-time
+          description: Recording creation timestamp
+      required:
+        - room
+        - trackID
+        - filename
+
+  securitySchemes:
+    TokenAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Global auth token (`AUTH_TOKEN`) or per-room token from `ROOM_TOKENS`.
+        Format: `Authorization: Bearer <token>`
+
+    JWTAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token signed with `JWT_SECRET`.
+        Supports HS256/HS384/HS512.
+        Claims: `role` (admin), `room` (room restriction), `aud` (audience).
+        Format: `Authorization: Bearer <jwt>`
+
+    AdminAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Admin token from `ADMIN_TOKEN`.
+        Format: `Authorization: Bearer <admin-token>`
