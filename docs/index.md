@@ -22,7 +22,7 @@ nav_order: 0
     </ul>
     <span class="lang-button">Enter Documentation →</span>
   </a>
-  
+
   <a href="{{ site.baseurl }}/zh/" class="lang-card">
     <div class="lang-icon">🇨🇳</div>
     <h2>中文</h2>
@@ -41,9 +41,44 @@ nav_order: 0
 
 ## About / 关于
 
-**Go-Live** is a lightweight, high-performance WebRTC SFU (Selective Forwarding Unit) server built with Go and Pion WebRTC. It supports WHIP/WHEP protocols for streaming, room-based broadcast, recording, and comprehensive observability.
+**Go-Live** is a lightweight, high-performance WebRTC SFU (Selective Forwarding Unit) server built with Go and Pion WebRTC. It supports WHIP/WHEP protocols for streaming, room-based broadcast, recording and comprehensive observability.
 
 **Go-Live** 是基于 Go 和 Pion WebRTC 构建的轻量级、高性能 WebRTC SFU（选择性转发单元）服务器。支持 WHIP/WHEP 协议推流、房间广播、录制功能和完整可观测性。
+
+### Features / 特性
+
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">📡</div>
+    <h3>WHIP/WHEP Support</h3>
+    <p>Full support for WHIP publishing and WHEP playback protocols</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🏠</div>
+    <h3>Room-based Broadcast</h3>
+    <p>One publisher, multiple subscribers per room with efficient fanout</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🎥</div>
+    <h3>Recording & Upload</h3>
+    <p>Built-in recording with automatic S3/MinIO upload support</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">📊</div>
+    <h3>Observability</h3>
+    <p>Prometheus metrics and OpenTelemetry tracing integration</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🔒</div>
+    <h3>Authentication</h3>
+    <p>Token-based and JWT authentication with per-room access control</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">⚡</div>
+    <h3>High Performance</h3>
+    <p>Built with Go for low-latency, high-throughput media distribution</p>
+  </div>
+</div>
 
 ### Quick Links / 快速链接
 
@@ -122,5 +157,44 @@ nav_order: 0
 
 .lang-card:hover .lang-button {
   background: #0550ae;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  padding: 1.5rem;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  background: #f6f8fa;
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  border-color: #0969da;
+  box-shadow: 0 2px 8px rgba(9, 105, 218, 0.1);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.feature-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #24292f;
+}
+
+.feature-card p {
+  margin: 0;
+  color: #57606a;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 </style>

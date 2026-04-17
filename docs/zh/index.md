@@ -1,12 +1,12 @@
 ---
 layout: default
-title: 首页
+title: Go-Live 首页
 description: 轻量级 WebRTC SFU 服务器 - 基于 Go 和 Pion WebRTC 构建
 nav_order: 1
 lang: zh
 ---
 
-# live-webrtc-go
+# Go-Live
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/LessUp/go-live/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/LessUp/go-live)](https://goreportcard.com/report/github.com/LessUp/go-live)
@@ -29,96 +29,151 @@ cd go-live
 # 直接运行
 go run ./cmd/server
 
-# 或使用开发脚本
+# 或者使用开发脚本（推荐）
 ./scripts/start.sh
 ```
 
-访问服务器：`http://localhost:8080`
+服务启动后，访问 `http://localhost:8080` 查看前端界面。
 
 ---
 
 ## ✨ 核心特性
 
-| 特性 | 说明 |
-|------|------|
-| 🎥 **WHIP/WHEP 协议** | 标准 HTTP 协议的 WebRTC 推流和播放，兼容 OBS 和现代浏览器 |
-| 🏠 **房间 SFU 架构** | 每房间单发布者、多订阅者，高效的媒体转发 |
-| 🔐 **灵活认证体系** | 支持全局 Token、房间级 Token、JWT 角色认证 |
-| 📹 **录制与上传** | VP8/VP9 → IVF、Opus → OGG，支持 S3/MinIO 自动上传 |
-| 📊 **完整可观测性** | Prometheus 指标、OpenTelemetry 追踪、健康检查端点 |
-| 🐳 **云原生就绪** | 支持 Docker、Docker Compose，适配 Kubernetes |
-| 🌐 **嵌入式 Web 界面** | 内置推流和播放页面，开箱即用 |
-
----
-
-## 🏗️ 系统架构
-
-```
-                         ┌─────────────────────────────────────┐
-                         │          HTTP Server :8080          │
-                         │                                     │
-    ┌──────────┐         │  ┌─────────┐    ┌─────────────┐    │
-    │  推流端   │ ──WHIP──▶│  │  认证   │───▶│    SFU      │    │
-    │(OBS/浏览器)│        │  │ 中间件   │    │  管理器      │    │
-    └──────────┘         │  └─────────┘    └──────┬──────┘    │
-                         │                        │           │
-    ┌──────────┐         │        ┌───────────────┤           │
-    │  播放端   │ ◀──WHEP──│        │               │           │
-    │ (浏览器)  │───────▶  │        ▼               ▼           │
-    └──────────┘         │ ┌─────────────┐ ┌───────────┐      │
-                         │ │    房间     │ │   录制    │      │
-                         │ │  (转发)     │ │  与上传   │      │
-                         │ └──────┬──────┘ └─────┬─────┘      │
-                         └────────┼──────────────┼────────────┘
-                                  │              │
-                        ┌─────────▼──────────────▼───────────┐
-                        │          对象存储                   │
-                        │         (S3/MinIO)                 │
-                        └────────────────────────────────────┘
-```
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">📡</div>
+    <h3>WHIP/WHEP 协议</h3>
+    <p>完整支持 WHIP 推流和 WHEP 播放协议，兼容 OBS、浏览器等主流工具</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🏠</div>
+    <h3>房间广播</h3>
+    <p>基于房间的 SFU 架构，一个发布者，多个订阅者，高效 RTP 分发</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🎥</div>
+    <h3>录制与上传</h3>
+    <p>内置录制功能，支持自动上传到 S3/MinIO 对象存储</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">📊</div>
+    <h3>可观测性</h3>
+    <p>Prometheus 指标采集和 OpenTelemetry 分布式追踪集成</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🔒</div>
+    <h3>认证体系</h3>
+    <p>支持 Token 和 JWT 认证，可配置房间级访问控制</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">⚡</div>
+    <h3>高性能</h3>
+    <p>基于 Go 语言开发，低延迟、高并发的媒体流分发能力</p>
+  </div>
+</div>
 
 ---
 
 ## 📖 文档导航
 
-| 文档 | 内容 |
-|------|------|
-| [使用指南](usage.md) | 本地开发、Docker 部署、配置说明、故障排除 |
-| [设计说明](design.md) | 系统架构、模块拆分、数据流向 |
-| [API 参考](api.md) | 完整 HTTP API 文档、请求/响应格式、错误码 |
+| 文档 | 描述 | 链接 |
+|------|------|------|
+| 使用指南 | 部署、配置、API 示例、故障排除 | [使用指南]({{ site.baseurl }}/zh/usage.html) |
+| API 参考 | 完整的 REST API 文档 | [API 参考]({{ site.baseurl }}/zh/api.html) |
+| 架构设计 | 系统架构、模块说明、数据流 | [设计文档]({{ site.baseurl }}/zh/design.html) |
 
 ---
 
-## 🛠️ 开发指南
+## 🛠️ 快速部署
+
+### Docker 部署
 
 ```bash
-# 构建
-make build
+# 构建镜像
+docker build -t live-webrtc-go:latest .
 
-# 运行测试
-make test
+# 运行
+docker run --rm -p 8080:8080 live-webrtc-go:latest
 
-# 完整 CI 流水线
-make ci
+# 启用录制
+docker run --rm -p 8080:8080 \
+  -e RECORD_ENABLED=1 \
+  -e RECORD_DIR=/records \
+  -v $(pwd)/records:/records \
+  live-webrtc-go:latest
+```
+
+### Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  live-webrtc:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - RECORD_ENABLED=1
+    volumes:
+      - ./records:/records
+    restart: unless-stopped
 ```
 
 ---
 
-## 🤝 参与贡献
+## 📦 系统要求
 
-我们欢迎各种形式的贡献！请查看我们的[贡献指南](https://github.com/LessUp/go-live/blob/master/CONTRIBUTING.md)了解详情。
-
----
-
-## 📄 许可协议
-
-本项目基于 [MIT License](https://github.com/LessUp/go-live/blob/master/LICENSE) 开源。
+| 依赖 | 版本 | 说明 |
+|------|------|------|
+| Go | 1.22+ | 编译所需 |
+| Docker | 20.10+ | 容器部署可选 |
+| 浏览器 | Chrome 90+ / Firefox 88+ | WebRTC 支持 |
 
 ---
 
 ## 🔗 相关链接
 
-- [GitHub 仓库](https://github.com/LessUp/go-live)
-- [问题反馈](https://github.com/LessUp/go-live/issues)
-- [更新日志](https://github.com/LessUp/go-live/blob/master/CHANGELOG.md)
-- [Pion WebRTC](https://github.com/pion/webrtc)
+- **GitHub**: [https://github.com/LessUp/go-live](https://github.com/LessUp/go-live)
+- **Releases**: [https://github.com/LessUp/go-live/releases](https://github.com/LessUp/go-live/releases)
+- **Issues**: [https://github.com/LessUp/go-live/issues](https://github.com/LessUp/go-live/issues)
+
+<style>
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  padding: 1.5rem;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  background: #f6f8fa;
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  border-color: #0969da;
+  box-shadow: 0 2px 8px rgba(9, 105, 218, 0.1);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.feature-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #24292f;
+}
+
+.feature-card p {
+  margin: 0;
+  color: #57606a;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+</style>

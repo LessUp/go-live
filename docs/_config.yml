@@ -1,12 +1,14 @@
 title: Go-Live
 description: >-
-  Lightweight WebRTC SFU Server — Built with Go + Pion WebRTC, supporting WHIP/WHEP streaming, room broadcast, recording and observability
+  Lightweight, high-performance WebRTC SFU Server — Built with Go + Pion WebRTC,
+  supporting WHIP/WHEP streaming, room broadcast, recording and observability.
 tagline: WebRTC SFU Server
 remote_theme: pages-themes/cayman@v0.2.0
 plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
   - jekyll-sitemap
+  - jekyll-feed
 
 # Repository
 repository: LessUp/go-live
@@ -22,7 +24,7 @@ author: LessUp
 
 # Social / SEO
 twitter:
-  username:
+  username: 
   card: summary
 social:
   name: LessUp
@@ -30,7 +32,7 @@ social:
     - https://github.com/LessUp
 
 # Logo (optional, for SEO tag)
-logo: /assets/logo.png
+logo: /assets/favicon.svg
 
 # Markdown configuration
 markdown: kramdown
@@ -50,6 +52,16 @@ navigation:
   - title: Home
     url: /en/
     lang: en
+  - title: API
+    url: /api.html
+  - title: 设计
+    url: /design.html
+    lang: zh
+  - title: Design
+    url: /en/design.html
+    lang: en
+  - title: Changelog
+    url: /changelog.html
   - title: GitHub
     url: https://github.com/LessUp/go-live
     external: true
@@ -90,15 +102,15 @@ exclude:
   - docker-compose.yml
   - .gitignore
   - .github
+  - changelog/CHANGELOG_GUIDE.md
+  - changelog/README.md
+  - changelog/RELEASE_WORKFLOW.md
+  - changelog/templates/
 
 # Include these files
 include:
   - robots.txt
   - sitemap.xml
-
-# Pagination (if needed later)
-# paginate: 10
-# paginate_path: "/blog/page:num/"
 
 # Timezone
 timezone: Asia/Shanghai
@@ -117,3 +129,6 @@ compress_html:
   startings: all
   blanklines: false
   profile: false
+
+# Analytics (Google Analytics - optional)
+# google_analytics: UA-XXXXXXXXX-X
