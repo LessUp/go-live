@@ -2,6 +2,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -68,6 +69,8 @@ func Load() *Config {
 	if v := getEnv("MAX_SUBS_PER_ROOM", "0"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			c.MaxSubsPerRoom = n
+		} else {
+			slog.Warn("invalid MAX_SUBS_PER_ROOM, using default", "value", v, "error", err)
 		}
 	}
 	if v := os.Getenv("ROOM_TOKENS"); v != "" {
@@ -89,11 +92,15 @@ func Load() *Config {
 	if v := getEnv("RATE_LIMIT_RPS", "0"); v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
 			c.RateLimitRPS = f
+		} else {
+			slog.Warn("invalid RATE_LIMIT_RPS, using default", "value", v, "error", err)
 		}
 	}
 	if v := getEnv("RATE_LIMIT_BURST", "0"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			c.RateLimitBurst = n
+		} else {
+			slog.Warn("invalid RATE_LIMIT_BURST, using default", "value", v, "error", err)
 		}
 	}
 	c.JWTSecret = getEnv("JWT_SECRET", "")

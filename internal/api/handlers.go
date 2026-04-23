@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -90,7 +91,9 @@ func (h *HTTPHandlers) ServeRooms(w http.ResponseWriter, r *http.Request) {
 	}
 	rooms := h.mgr.ListRooms()
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(rooms)
+	if err := json.NewEncoder(w).Encode(rooms); err != nil {
+		slog.Error("encode rooms response", "error", err)
+	}
 }
 
 // ServeBootstrap 返回浏览器页面需要的公开运行时配置。
@@ -133,7 +136,9 @@ func (h *HTTPHandlers) ServeBootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		slog.Error("encode bootstrap response", "error", err)
+	}
 }
 
 // ServeWHIPPublish 处理 WHIP 推流：POST /api/whip/publish/{room}
@@ -228,7 +233,9 @@ func (h *HTTPHandlers) ServeRecordsList(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode([]any{})
+			if err := json.NewEncoder(w).Encode([]any{}); err != nil {
+				slog.Error("encode empty records response", "error", err)
+			}
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -268,7 +275,9 @@ func (h *HTTPHandlers) ServeRecordsList(w http.ResponseWriter, r *http.Request) 
 		return list[i].ModTime > list[j].ModTime
 	})
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(list)
+	if err := json.NewEncoder(w).Encode(list); err != nil {
+		slog.Error("encode records response", "error", err)
+	}
 }
 
 // ServeAdminCloseRoom 管理接口：关闭指定房间，释放资源并返回 200。
