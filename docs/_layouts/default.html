@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ page.lang | default: site.lang | default: 'zh' }}">
+<html lang="{{ page.lang | default: site.lang | default: 'en' }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,14 +14,14 @@
     <link rel="sitemap" type="application/xml" title="Sitemap" href="{{ site.baseurl }}/sitemap.xml">
     {% endif %}
 
-    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="{{ site.baseurl }}/assets/favicon.svg">
+    
+    <meta name="theme-color" content="#0969da">
   </head>
   <body>
-    <!-- Language Switcher -->
     <div class="language-switcher">
       <div class="lang-container">
-        <span class="lang-label">{{ site.data.i18n.language[page.lang] | default: 'Language' }}:</span>
+        <span class="lang-label">{% if page.lang == 'zh' %}语言{% else %}Language{% endif %}:</span>
         {% for lang in site.languages %}
           {% if page.lang == lang.code %}
             <span class="lang-link active">{{ lang.name }}</span>
@@ -35,7 +35,10 @@
 
     <header class="site-header">
       <nav class="site-nav">
-        <a class="site-title" href="{{ site.baseurl }}/">{{ site.title }}</a>
+        <a class="site-title" href="{{ site.baseurl }}/">
+          <span class="logo-icon">📹</span>
+          {{ site.title }}
+        </a>
         <ul class="nav-links">
           {% for item in site.navigation %}
           {% unless item.lang and item.lang != page.lang %}
@@ -56,6 +59,9 @@
       <article class="post">
         <header class="post-header">
           <h1 class="post-title">{{ page.title }}</h1>
+          {% if page.description %}
+          <p class="post-description">{{ page.description }}</p>
+          {% endif %}
         </header>
         <div class="post-content">
           {{ content }}
@@ -64,19 +70,41 @@
     </main>
 
     <footer class="site-footer">
-      <p>
-        &copy; {{ site.time | date: '%Y' }} {{ site.author }}.
-        {% if page.lang == 'zh' %}
-        本项目以 <a href="https://github.com/LessUp/go-live/blob/master/LICENSE">MIT 协议</a> 开源。
-        {% else %}
-        Licensed under <a href="https://github.com/LessUp/go-live/blob/master/LICENSE">MIT License</a>.
-        {% endif %}
-      </p>
-      <p>
-        <a href="https://github.com/LessUp/go-live">GitHub</a> |
-        <a href="https://github.com/LessUp/go-live/issues">{% if page.lang == 'zh' %}问题反馈{% else %}Issues{% endif %}</a> |
-        <a href="{{ site.baseurl }}/sitemap.xml">Sitemap</a>
-      </p>
+      <div class="footer-content">
+        <div class="footer-section">
+          <h4>{{ site.title }}</h4>
+          <p>{{ site.tagline }}</p>
+        </div>
+        <div class="footer-section">
+          <h4>{% if page.lang == 'zh' %}快速链接{% else %}Quick Links{% endif %}</h4>
+          <ul>
+            <li><a href="https://github.com/LessUp/go-live">GitHub</a></li>
+            <li><a href="https://github.com/LessUp/go-live/releases">{% if page.lang == 'zh' %}版本发布{% else %}Releases{% endif %}</a></li>
+            <li><a href="https://github.com/LessUp/go-live/issues">{% if page.lang == 'zh' %}问题反馈{% else %}Issues{% endif %}</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>{% if page.lang == 'zh' %}文档{% else %}Documentation{% endif %}</h4>
+          <ul>
+            <li><a href="{{ site.baseurl }}/en/usage.html">Usage Guide</a></li>
+            <li><a href="{{ site.baseurl }}/zh/usage.html">使用指南</a></li>
+            <li><a href="{{ site.baseurl }}/en/api.html">API Reference</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>
+          &copy; {{ site.time | date: '%Y' }} {{ site.author }}.
+          {% if page.lang == 'zh' %}
+          本项目以 <a href="https://github.com/LessUp/go-live/blob/master/LICENSE">MIT 协议</a> 开源。
+          {% else %}
+          Licensed under <a href="https://github.com/LessUp/go-live/blob/master/LICENSE">MIT License</a>.
+          {% endif %}
+        </p>
+        <p>
+          <a href="{{ site.baseurl }}/sitemap.xml">Sitemap</a>
+        </p>
+      </div>
     </footer>
   </body>
 </html>

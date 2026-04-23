@@ -10,31 +10,24 @@ plugins:
   - jekyll-sitemap
   - jekyll-feed
 
-# Repository
 repository: LessUp/go-live
-show_downloads: false
+show_downloads: true
 
-# Site URL (for SEO and sitemap)
 url: "https://lessup.github.io"
 baseurl: "/go-live"
 
-# Default language
-lang: zh
+lang: en
 author: LessUp
 
-# Social / SEO
 twitter:
-  username: 
-  card: summary
+  card: summary_large_image
 social:
   name: LessUp
   links:
     - https://github.com/LessUp
 
-# Logo (optional, for SEO tag)
 logo: /assets/favicon.svg
 
-# Markdown configuration
 markdown: kramdown
 kramdown:
   input: GFM
@@ -42,40 +35,47 @@ kramdown:
   syntax_highlighter: rouge
   syntax_highlighter_opts:
     block:
-      line_numbers: false
+      line_numbers: true
 
-# Navigation header links (Cayman theme)
 navigation:
-  - title: 首页
-    url: /zh/
-    lang: zh
   - title: Home
     url: /en/
     lang: en
+  - title: 首页
+    url: /zh/
+    lang: zh
   - title: API
-    url: /api.html
-  - title: 设计
-    url: /design.html
+    url: /en/api.html
+    lang: en
+  - title: API
+    url: /zh/api.html
     lang: zh
   - title: Design
     url: /en/design.html
     lang: en
+  - title: 设计
+    url: /zh/design.html
+    lang: zh
+  - title: Usage
+    url: /en/usage.html
+    lang: en
+  - title: 使用
+    url: /zh/usage.html
+    lang: zh
   - title: Changelog
     url: /changelog.html
   - title: GitHub
     url: https://github.com/LessUp/go-live
     external: true
 
-# Language switcher
 languages:
-  - code: zh
-    name: 中文
-    url: /zh/
   - code: en
     name: English
     url: /en/
+  - code: zh
+    name: 中文
+    url: /zh/
 
-# Default layout for all pages
 defaults:
   - scope:
       path: ""
@@ -88,7 +88,6 @@ defaults:
       seo:
         type: WebSite
 
-# Exclude non-doc files from processing
 exclude:
   - Gemfile
   - Gemfile.lock
@@ -107,21 +106,16 @@ exclude:
   - changelog/RELEASE_WORKFLOW.md
   - changelog/templates/
 
-# Include these files
 include:
   - robots.txt
-  - sitemap.xml
 
-# Timezone
 timezone: Asia/Shanghai
 
-# Build settings
 lsi: false
 incremental: false
 gist:
   noscript: false
 
-# HTML compression
 compress_html:
   clippings: all
   comments: all
@@ -129,6 +123,3 @@ compress_html:
   startings: all
   blanklines: false
   profile: false
-
-# Analytics (Google Analytics - optional)
-# google_analytics: UA-XXXXXXXXX-X
