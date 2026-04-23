@@ -14,6 +14,62 @@ A lightweight **WebRTC SFU (Selective Forwarding Unit)** server built with Go 1.
 - **Auth**: Token (global/room-level) or JWT with role-based access
 - **Observability**: Prometheus metrics, OpenTelemetry tracing, health checks
 
+## OpenSpec Workflow
+
+This project uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for spec-driven development. All specifications are in `openspec/specs/` as the source of truth.
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/opsx:propose <change>` | Start a new change proposal |
+| `/opsx:explore` | Investigate problems and clarify requirements |
+| `/opsx:apply` | Implement tasks from the proposal |
+| `/opsx:archive` | Archive completed change and merge specs |
+
+### Workflow
+
+1. **Review specs** - Check `openspec/specs/` for existing requirements
+2. **Propose change** - Use `/opsx:propose` to create:
+   - `proposal.md` - Why and what changes
+   - `specs/` - Delta specs (ADDED/MODIFIED/REMOVED)
+   - `design.md` - Technical approach
+   - `tasks.md` - Implementation checklist
+3. **Implement** - Use `/opsx:apply` to work through tasks
+4. **Archive** - Use `/opsx:archive` to merge delta specs and preserve history
+
+### Spec Format
+
+Requirements use this structure:
+```markdown
+### Requirement: <name>
+Description with SHALL/MUST keywords.
+
+#### Scenario: <name>
+- **WHEN** condition
+- **THEN** expected outcome
+```
+
+### Delta Specs
+
+Changes are tracked using delta operations:
+- `## ADDED Requirements` - New capabilities
+- `## MODIFIED Requirements` - Changed behavior (include full updated content)
+- `## REMOVED Requirements` - Deprecated features (include Reason and Migration)
+
+### Capabilities
+
+| Capability | Location | Description |
+|------------|----------|-------------|
+| WHIP/WHEP | `openspec/specs/whip-whep/` | Protocol specs |
+| Room SFU | `openspec/specs/room-sfu/` | SFU behavior |
+| Auth | `openspec/specs/authentication/` | Auth system |
+| Recording | `openspec/specs/recording/` | Recording specs |
+| Observability | `openspec/specs/observability/` | Metrics/tracing |
+| API | `openspec/specs/api/` | API overview |
+| Testing | `openspec/specs/testing/` | Test specs |
+| RFCs | `openspec/specs/rfc/` | Architecture decisions |
+
 ## Architecture
 
 ```
