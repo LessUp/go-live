@@ -1,0 +1,46 @@
+schema: spec-driven
+
+context: |
+  Tech Stack:
+    - Go 1.22+ with Pion WebRTC
+    - WHIP/WHEP protocols for WebRTC streaming
+    - Prometheus metrics, OpenTelemetry tracing
+    - S3/MinIO for recording uploads
+
+  Architecture:
+    - SFU (Selective Forwarding Unit) pattern
+    - Single publisher per room, multiple subscribers
+    - Room-based isolation with TrackFanout
+    - Manager → Room → TrackFanout hierarchy
+
+  Key Constraints:
+    - No transcoding (pure forwarding)
+    - Room names: ^[A-Za-z0-9_-]{1,64}$
+    - SDP size limit: 1MB
+    - In-memory only (no persistence)
+
+  Build Commands:
+    - Build: go build -o bin/live-webrtc-go ./cmd/server
+    - Run: go run ./cmd/server
+    - Test: make test (unit + integration + security)
+    - Lint: make lint (gofmt + go vet + golangci-lint)
+
+rules:
+  specs: |
+    - Use SHALL/MUST for normative requirements (RFC 2119)
+    - Each requirement needs at least one scenario (WHEN/THEN format)
+    - Reference existing specs in openspec/specs/ when modifying
+    - Scenarios MUST use exactly 4 hashtags (####)
+    - Focus on observable behavior, not implementation details
+
+  tasks: |
+    - Group tasks under ## numbered headings
+    - Each task: - [ ] X.Y Task description
+    - Run `make lint && make test-unit` after changes
+    - Reference specs for what to build, design for how
+
+  design: |
+    - Document concurrency considerations (goroutines, mutexes)
+    - Include rollback strategy for breaking changes
+    - Reference RFCs in openspec/specs/rfc/ for patterns
+    - Focus on architecture, not line-by-line implementation
