@@ -286,15 +286,15 @@ func (r *Room) setupRecording(feed *trackFanout, remote *webrtc.TrackRemote) {
 	}
 	base := fmt.Sprintf("%s_%s_%d", r.name, remote.ID(), time.Now().Unix())
 	mime := remote.Codec().MimeType
-	switch {
-	case mime == webrtc.MimeTypeOpus:
+	switch mime {
+	case webrtc.MimeTypeOpus:
 		p := filepath.Join(r.mgr.cfg.RecordDir, base+".ogg")
 		if w, err := oggwriter.New(p, 48000, 2); err == nil {
 			feed.setRecorder(w, p)
 		} else {
 			slog.Error("create ogg recorder", "room", r.name, "error", err)
 		}
-	case mime == webrtc.MimeTypeVP8 || mime == webrtc.MimeTypeVP9:
+	case webrtc.MimeTypeVP8, webrtc.MimeTypeVP9:
 		p := filepath.Join(r.mgr.cfg.RecordDir, base+".ivf")
 		if w, err := ivfwriter.New(p); err == nil {
 			feed.setRecorder(w, p)

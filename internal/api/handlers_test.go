@@ -41,7 +41,7 @@ func signedJWT(t *testing.T, secret string, claims jwt.MapClaims) string {
 
 func decodeRecords(t *testing.T, resp *http.Response) []recordResponse {
 	t.Helper()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	var records []recordResponse
 	if err := json.NewDecoder(resp.Body).Decode(&records); err != nil {
 		t.Fatalf("decode records: %v", err)

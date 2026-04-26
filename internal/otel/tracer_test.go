@@ -11,10 +11,10 @@ import (
 func TestInitTracer_Stdout(t *testing.T) {
 	// Ensure no OTLP endpoint is set
 	origEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	_ = os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	defer func() {
 		if origEndpoint != "" {
-			os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", origEndpoint)
+			_ = os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", origEndpoint)
 		}
 	}()
 
@@ -34,10 +34,10 @@ func TestInitTracer_Stdout(t *testing.T) {
 
 func TestInitTracer_ServiceName(t *testing.T) {
 	origEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	_ = os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	defer func() {
 		if origEndpoint != "" {
-			os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", origEndpoint)
+			_ = os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", origEndpoint)
 		}
 	}()
 
@@ -58,10 +58,10 @@ func TestInitTracer_ServiceName(t *testing.T) {
 
 func TestInitTracer_MultipleShutdown(t *testing.T) {
 	origEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	_ = os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	defer func() {
 		if origEndpoint != "" {
-			os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", origEndpoint)
+			_ = os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", origEndpoint)
 		}
 	}()
 

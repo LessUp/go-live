@@ -71,11 +71,11 @@ func TestLoad_EnvironmentVariables(t *testing.T) {
 	}
 
 	for k, v := range envVars {
-		os.Setenv(k, v)
+		_ = os.Setenv(k, v)
 	}
 	defer func() {
 		for k := range envVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 	}()
 
@@ -281,8 +281,8 @@ func TestICEConfig_WithTURN(t *testing.T) {
 }
 
 func TestGetEnv(t *testing.T) {
-	os.Setenv("TEST_VAR", "test_value")
-	defer os.Unsetenv("TEST_VAR")
+	_ = os.Setenv("TEST_VAR", "test_value")
+	defer func() { _ = os.Unsetenv("TEST_VAR") }()
 
 	result := getEnv("TEST_VAR", "default")
 	if result != "test_value" {

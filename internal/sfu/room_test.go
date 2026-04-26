@@ -108,7 +108,7 @@ func TestClosePublisherClearsFeedsAndTriggersUpload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new peer connection: %v", err)
 	}
-	defer pub.Close()
+	defer func() { _ = pub.Close() }()
 	room.publisher = pub
 
 	recordPath := filepath.Join(t.TempDir(), "record.ivf")
@@ -166,7 +166,7 @@ func TestClosePublisherLeavesFileForFailedUpload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new peer connection: %v", err)
 	}
-	defer pub.Close()
+	defer func() { _ = pub.Close() }()
 	room.publisher = pub
 
 	recordPath := filepath.Join(t.TempDir(), "record.ivf")
@@ -211,7 +211,7 @@ func TestRemoveSubscriberDetachesFeedAndUpdatesState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new peer connection: %v", err)
 	}
-	defer sub.Close()
+	defer func() { _ = sub.Close() }()
 	room.subs[sub] = struct{}{}
 
 	feed := &trackFanout{

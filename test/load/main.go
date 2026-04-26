@@ -60,7 +60,7 @@ func (lt *LoadTester) makeRequest(endpoint string) {
 		atomic.AddInt64(&lt.results.FailedRequests, 1)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
 		atomic.AddInt64(&lt.results.RateLimitedRequests, 1)

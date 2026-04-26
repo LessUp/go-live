@@ -59,7 +59,7 @@ func (h *HTTPHandlers) Close() {
 }
 
 func (h *HTTPHandlers) readSDPBody(w http.ResponseWriter, r *http.Request) (string, bool) {
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	limited := http.MaxBytesReader(w, r.Body, maxSDPBodyBytes)
 	body, err := io.ReadAll(limited)
 	if err != nil {
