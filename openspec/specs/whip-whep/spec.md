@@ -4,6 +4,12 @@
 
 WebRTC-HTTP Ingestion Protocol (WHIP) and WebRTC-HTTP Egress Protocol (WHEP) for stream publishing and playback over HTTP. Enables compatibility with OBS Studio and modern browsers through simple HTTP-based signaling.
 
+## Change History
+
+| Date | Change | Source |
+|------|--------|--------|
+| 2026-04-30 | API contract alignment (201/409/404 status codes) | foundation-contract-alignment |
+
 ## Requirements
 
 ### Requirement: WHIP Publishing

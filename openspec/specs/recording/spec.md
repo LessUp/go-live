@@ -4,6 +4,12 @@
 
 WebRTC stream recording with automatic upload to S3/MinIO object storage for later playback.
 
+## Change History
+
+| Date | Change | Source |
+|------|--------|--------|
+| 2026-04-30 | Recording query response model (name, size, modTime, url) | foundation-contract-alignment |
+
 ## Requirements
 
 ### Requirement: Video Recording
@@ -64,4 +70,4 @@ The system SHALL provide API to list recording files.
 
 #### Scenario: List recordings
 - **WHEN** client calls GET /api/records
-- **THEN** system returns list of recordings with metadata (room, trackID, filename, size, createdAt)
+- **THEN** system returns list of recordings with metadata (name, size, modTime, url)

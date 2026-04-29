@@ -4,6 +4,12 @@
 
 Reference to the OpenAPI specification defining all HTTP endpoints for the live-webrtc-go server.
 
+## Change History
+
+| Date | Change | Source |
+|------|--------|--------|
+| 2026-04-30 | API contract alignment (schemas, status codes, OpenAPI) | foundation-contract-alignment |
+
 ## Requirements
 
 ### Requirement: OpenAPI Specification Reference
