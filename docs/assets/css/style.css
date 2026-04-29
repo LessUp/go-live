@@ -9,6 +9,32 @@
   --bg-light: #f6f8fa;
   --bg-white: #ffffff;
   --success-color: #1a7f37;
+  --hero-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Hero section */
+.hero-section {
+  background: var(--hero-gradient);
+  color: white;
+  padding: 2.5rem 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.hero-tagline {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 0.1em;
+}
+
+.hero-tagline-en {
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0;
+  opacity: 0.9;
+  letter-spacing: 0.05em;
 }
 
 * {

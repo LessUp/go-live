@@ -40,8 +40,8 @@ build:
 
 install-tools:
 	@echo "Installing development tools..."
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
-	@go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
+	@go install github.com/securecodewarrior/gosec/v2/cmd/gosec@v2.21.4
 	@go install github.com/axw/gocov/gocov@latest
 	@go install github.com/AlekSi/gocov-xml@latest
 	@echo "Development tools installed"

@@ -21,9 +21,13 @@ coverage/
 # Dependencies
 vendor/
 
-# IDE/editor files
+# IDE/editor files - but keep project-level configs
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 *.swp
 *.swo
 .DS_Store
@@ -40,7 +44,16 @@ web/dist/
 
 # Recording output
 records/
-
-# Test artifacts
 test/reports/
+
+# Binary files
 server
+
+# IDE and tool configs
+.mcp/
+.omc/
+.vscode/
+
+# Generated reports
+reports/
+coverage*.out

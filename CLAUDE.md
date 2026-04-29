@@ -257,6 +257,57 @@ curl http://localhost:8080/metrics
 curl http://localhost:8080/healthz
 ```
 
+### WebRTC 调试技巧
+
+#### ICE 连接问题排查
+```bash
+# 1. 检查 STUN/TURN 配置
+echo $STUN_URLS
+echo $TURN_URLS
+
+# 2. 测试 STUN 连通性
+stun stun.l.google.com:19302
+
+# 3. 启用 WebRTC 详细日志
+GODEBUG=nettrace=1 go run ./cmd/server
+
+# 4. 查看 ICE 候选
+# 在浏览器控制台查看 RTCPeerConnection.iceGatheringState
+```
+
+#### SDP 分析
+```bash
+# 保存 SDP offer
+curl -X POST http://localhost:8080/api/whip/publish/test \
+  -H "Authorization: Bearer $TOKEN" \
+  -d @offer.sdp > answer.sdp
+
+# 分析 SDP 内容
+cat answer.sdp | grep -E "m=|a=rtpmap|a=fmtp"
+```
+
+#### 常见 WebRTC 错误
+
+| 错误 | 原因 | 解决方案 |
+|------|------|----------|
+| ICE failed | NAT 穿透失败 | 配置 TURN 服务器 `TURN_URLS` |
+| DTLS error | 证书问题 | 检查 TLS 配置，确保时间同步 |
+| No tracks received | 编解码器不匹配 | 确认 VP8/VP9/Opus 支持 |
+| Connection timeout | 防火墙阻断 | 开放 UDP 端口或使用 TURN |
+| High latency | 网络拥塞 | 检查带宽、启用 simulcast |
+
+#### 性能调优
+```bash
+# 查看当前 goroutine 数量
+curl http://localhost:8080/debug/pprof/goroutine?debug=1
+
+# 内存分析
+go tool pprof http://localhost:8080/debug/pprof/heap
+
+# CPU 分析 (30秒采样)
+go tool pprof http://localhost:8080/debug/pprof/profile?seconds=30
+```
+
 ## Security Considerations
 
 - Never commit secrets, tokens, or credentials
@@ -264,3 +315,42 @@ curl http://localhost:8080/healthz
 - Use `crypto/subtle.ConstantTimeCompare` for token comparison
 - Run `make security` for security scans
 - Review auth changes carefully
+
+## 常见错误 FAQ
+
+### 认证错误
+
+| 错误信息 | 原因 | 解决方案 |
+|----------|------|----------|
+| `401 Unauthorized` | Token 缺失或无效 | 检查 `Authorization: Bearer $TOKEN` |
+| `403 Forbidden` | JWT 房间限制 | 确认 JWT `room` claim 匹配目标房间 |
+| `403 Forbidden` | 房间已有发布者 | 先关闭现有发布者或使用新房间名 |
+
+### 录制问题
+
+| 问题 | 检查项 |
+|------|--------|
+| 录制文件未生成 | `RECORD_ENABLED=1`，检查 `RECORD_DIR` 权限 |
+| 文件损坏 | 确认编解码器为 VP8/VP9/Opus |
+| S3 上传失败 | 检查 `S3_*` 配置和网络连通性 |
+
+### 连接问题
+
+| 症状 | 诊断步骤 |
+|------|----------|
+| 观众无法连接 | 1. 检查发布者是否在线 2. 验证认证 3. 检查 ICE 候选 |
+| 画面卡顿 | 1. 检查带宽 2. 查看服务器 CPU/内存 3. 检查丢包率 |
+| 延迟过高 | 1. 确认 TURN 服务器位置 2. 检查网络路由 |
+
+### 配置问题
+
+```bash
+# 验证配置加载
+go run ./cmd/server -h 2>&1 | head -20
+
+# 检查环境变量
+env | grep -E "AUTH|RECORD|STUN|TURN|S3"
+
+# 测试配置
+curl -v http://localhost:8080/api/bootstrap
+```
