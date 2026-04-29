@@ -259,10 +259,10 @@ S3_BUCKET=recordings
 
 ### Streaming Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/api/whip/publish/{room}` | Token/JWT | Publish stream to room |
-| `POST` | `/api/whep/play/{room}` | Token/JWT | Play stream from room |
+| Method | Path | Auth | Success | Key Errors |
+|--------|------|------|---------|------------|
+| `POST` | `/api/whip/publish/{room}` | Token/JWT | `201 Created` (SDP Answer) | `401` auth, `409` duplicate publisher |
+| `POST` | `/api/whep/play/{room}` | Token/JWT | `201 Created` (SDP Answer) | `401` auth, `403` subscriber limit, `404` no publisher |
 
 ### Query Endpoints
 

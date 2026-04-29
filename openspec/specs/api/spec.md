@@ -12,7 +12,7 @@ The system SHALL maintain an authoritative API specification in OpenAPI 3.0.3 fo
 
 #### Scenario: API spec location
 - **WHEN** developer needs to reference API endpoints
-- **THEN** OpenAPI spec is available at `specs/api/openapi.yaml`
+- **THEN** OpenAPI spec is available at `openspec/specs/api/openapi.yaml`
 
 ### Requirement: Streaming Endpoints
 
@@ -20,11 +20,11 @@ The system SHALL provide WHIP and WHEP endpoints for stream publishing and playb
 
 #### Scenario: WHIP publish endpoint
 - **WHEN** client calls POST /api/whip/publish/{room}
-- **THEN** system accepts SDP offer and returns SDP answer
+- **THEN** system accepts SDP offer and returns SDP answer with `201 Created`
 
 #### Scenario: WHEP play endpoint
 - **WHEN** client calls POST /api/whep/play/{room}
-- **THEN** system accepts SDP offer and returns SDP answer
+- **THEN** system accepts SDP offer and returns SDP answer with `201 Created`
 
 ### Requirement: Query Endpoints
 
@@ -62,7 +62,7 @@ The system SHALL provide health and metrics endpoints without authentication.
 
 The authoritative API specification is maintained in OpenAPI 3.0.3 format at:
 
-**File:** `specs/api/openapi.yaml`
+**File:** `openspec/specs/api/openapi.yaml`
 
 ## Authentication
 
@@ -94,18 +94,17 @@ The authoritative API specification is maintained in OpenAPI 3.0.3 format at:
 {
   "name": "string",
   "hasPublisher": true,
-  "subscriberCount": 0,
-  "createdAt": "2025-01-01T00:00:00Z"
+  "tracks": 0,
+  "subscribers": 0
 }
 ```
 
 ### Recording
 ```json
 {
-  "room": "string",
-  "trackID": "string",
-  "filename": "string",
+  "name": "string",
   "size": 0,
-  "createdAt": "2025-01-01T00:00:00Z"
+  "modTime": "2025-01-01T00:00:00Z",
+  "url": "/records/filename"
 }
 ```

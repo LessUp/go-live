@@ -141,6 +141,29 @@ func (h *HTTPHandlers) ServeBootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// writeJSONError writes a JSON {"error": msg} response with the given status code.
+func writeJSONError(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(map[string]string{"error": msg}); err != nil {
+		slog.Error("encode error response", "status", status, "error", err)
+	}
+}
+
+// statusForSFUError maps well-known SFU sentinel errors to their HTTP status codes.
+func statusForSFUError(err error) int {
+	switch {
+	case errors.Is(err, sfu.ErrPublisherExists):
+		return http.StatusConflict
+	case errors.Is(err, sfu.ErrNoPublisher):
+		return http.StatusNotFound
+	case errors.Is(err, sfu.ErrSubscriberLimitReached):
+		return http.StatusForbidden
+	default:
+		return http.StatusBadRequest
+	}
+}
+
 // ServeWHIPPublish 处理 WHIP 推流：POST /api/whip/publish/{room}
 // 请求体为 SDP Offer，返回 SDP Answer（201 Created）。
 func (h *HTTPHandlers) ServeWHIPPublish(w http.ResponseWriter, r *http.Request, room string) {
@@ -167,7 +190,7 @@ func (h *HTTPHandlers) ServeWHIPPublish(w http.ResponseWriter, r *http.Request, 
 	}
 	answer, err := h.mgr.Publish(r.Context(), room, offerSDP)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, statusForSFUError(err), err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/sdp")
@@ -203,7 +226,7 @@ func (h *HTTPHandlers) ServeWHEPPlay(w http.ResponseWriter, r *http.Request, roo
 	}
 	answer, err := h.mgr.Subscribe(r.Context(), room, offerSDP)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, statusForSFUError(err), err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/sdp")

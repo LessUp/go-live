@@ -458,10 +458,11 @@ X-Auth-Token: <token>
 
 | Issue | Possible Cause | Solution |
 |-------|---------------|----------|
-| `publisher already exists` | Room already has a publisher | Use a different room name or wait for publisher to disconnect |
+| `publisher already exists in this room` | Room already has a publisher | Use a different room name or wait for publisher to disconnect |
 | `unauthorized` | Authentication failed | Check token or JWT configuration |
 | `too many requests` | Rate limit triggered | Increase `RATE_LIMIT_BURST` or wait |
-| `room not found` | Room does not exist | Ensure publisher is connected |
+| `no active publisher in room` | Room has no publisher | Ensure publisher is connected |
+| `subscriber limit reached` | `MAX_SUBS_PER_ROOM` hit | Increase limit or wait for subscribers to disconnect |
 | `ICE connection failed` | NAT traversal issue | Configure TURN server |
 | No video/audio | Codec mismatch | Check browser-supported codecs |
 

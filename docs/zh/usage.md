@@ -458,10 +458,11 @@ X-Auth-Token: <token>
 
 | 问题 | 可能原因 | 解决方案 |
 |------|----------|----------|
-| `publisher already exists` | 房间已有发布者 | 使用不同房间名或等待发布者断开 |
+| `publisher already exists in this room` | 房间已有发布者 | 使用不同房间名或等待发布者断开 |
 | `unauthorized` | 认证失败 | 检查 Token 或 JWT 配置 |
 | `too many requests` | 触发限流 | 增加 `RATE_LIMIT_BURST` 或等待 |
-| `room not found` | 房间不存在 | 确保发布者已连接 |
+| `no active publisher in room` | 房间无发布者 | 确保发布者已连接 |
+| `subscriber limit reached` | 已达 `MAX_SUBS_PER_ROOM` 上限 | 增大限制或等待订阅者断开 |
 | `ICE connection failed` | NAT 穿透问题 | 配置 TURN 服务器 |
 | 无视频/音频 | 编解码器不匹配 | 检查浏览器支持的编解码器 |
 

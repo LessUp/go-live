@@ -12,7 +12,7 @@ The system SHALL accept WebRTC streams via WHIP protocol at endpoint `POST /api/
 
 #### Scenario: Successful publish
 - **WHEN** publisher sends SDP offer to POST /api/whip/publish/{room} with valid auth token
-- **THEN** system returns SDP answer in response body and creates PeerConnection for publisher
+- **THEN** system returns `201 Created` with `Content-Type: application/sdp` and the SDP answer in the body
 
 #### Scenario: Publisher authentication failure
 - **WHEN** publisher sends request without valid auth token
@@ -24,7 +24,7 @@ The system SHALL accept WebRTC streams via WHIP protocol at endpoint `POST /api/
 
 #### Scenario: Room already has publisher
 - **WHEN** publisher attempts to publish to room with existing publisher
-- **THEN** system returns 403 Forbidden
+- **THEN** system returns `409 Conflict` with `Content-Type: application/json` and error body `{"error": "publisher already exists in this room"}`
 
 ### Requirement: WHEP Playback
 
@@ -32,7 +32,7 @@ The system SHALL allow viewers to play WebRTC streams via WHEP protocol at endpo
 
 #### Scenario: Successful playback
 - **WHEN** viewer sends SDP offer to POST /api/whep/play/{room} with valid auth token
-- **THEN** system returns SDP answer and creates PeerConnection for viewer
+- **THEN** system returns `201 Created` with `Content-Type: application/sdp` and the SDP answer in the body
 
 #### Scenario: Viewer authentication failure
 - **WHEN** viewer sends request without valid auth token
@@ -40,11 +40,11 @@ The system SHALL allow viewers to play WebRTC streams via WHEP protocol at endpo
 
 #### Scenario: Room full
 - **WHEN** MAX_SUBS_PER_ROOM is configured and limit is reached
-- **THEN** system returns 403 Forbidden
+- **THEN** system returns `403 Forbidden` with `Content-Type: application/json` and error body `{"error": "subscriber limit reached"}`
 
 #### Scenario: No publisher in room
-- **WHEN** viewer attempts to play from room with no publisher
-- **THEN** system returns appropriate error
+- **WHEN** viewer attempts to play from room with no active publisher, or a room that does not exist
+- **THEN** system returns `404 Not Found` with `Content-Type: application/json` and error body `{"error": "no active publisher in room"}`
 
 ### Requirement: SDP Exchange
 

@@ -24,7 +24,7 @@ Publisher                          Server
     │──── POST /api/whip/publish/{room} ────▶│
     │      (SDP Offer)               │
     │                                │
-    │◀──── 200 OK ──────────────────▶│
+    │◀──── 201 Created ─────────────▶│
     │      (SDP Answer)              │
     │                                │
     │◀──────── ICE / WebRTC ────────▶│
@@ -39,7 +39,7 @@ Viewer                            Server
     │──── POST /api/whep/play/{room} ───────▶│
     │      (SDP Offer)               │
     │                                │
-    │◀──── 200 OK ──────────────────▶│
+    │◀──── 201 Created ─────────────▶│
     │      (SDP Answer)              │
     │                                │
     │◀──────── ICE / WebRTC ────────▶│
@@ -60,7 +60,7 @@ Viewer                            Server
 3. Server creates PeerConnection
 4. Server sets remote description (client's offer)
 5. Server creates local description (answer)
-6. Server returns SDP Answer in HTTP 200 response
+6. Server returns SDP Answer in HTTP 201 response
 7. Client sets remote description (server's answer)
 8. ICE negotiation begins
 

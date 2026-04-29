@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -493,5 +495,138 @@ func TestAllowCORSAndHostMatch(t *testing.T) {
 	}
 	if hostMatch("example.com", "https://evil.com") {
 		t.Fatal("expected hostMatch to reject different host")
+	}
+}
+
+// TestRoomListJSONContract is a RED test: it asserts that /api/rooms emits
+// canonical lower-camel keys ("name", "subscribers") and that the exported Go
+// field name "Name" is absent. It will FAIL until RoomInfo carries JSON tags.
+func TestRoomListJSONContract(t *testing.T) {
+	h, mgr := setupTestHandlers()
+	mgr.EnsureRoom("test-room")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/rooms", nil)
+	w := httptest.NewRecorder()
+	h.ServeRooms(w, req)
+
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Result().StatusCode)
+	}
+
+	body := w.Body.Bytes()
+	if !bytes.Contains(body, []byte(`"name"`)) {
+		t.Errorf("expected canonical key \"name\" in response body, got: %s", body)
+	}
+	if !bytes.Contains(body, []byte(`"subscribers"`)) {
+		t.Errorf("expected canonical key \"subscribers\" in response body, got: %s", body)
+	}
+	if bytes.Contains(body, []byte(`"Name"`)) {
+		t.Errorf("expected exported Go field \"Name\" to be absent, got: %s", body)
+	}
+}
+
+// TestStatusForSFUError is a RED test: it will fail to compile because
+// statusForSFUError does not exist yet and neither do sfu.ErrPublisherExists,
+// sfu.ErrSubscriberLimitReached, sfu.ErrNoPublisher. Once the sentinel errors
+// and the helper are added in the production task this will compile and the
+// assertions will drive the correct status mapping.
+func TestStatusForSFUError(t *testing.T) {
+	tests := []struct {
+		err  error
+		want int
+	}{
+		{sfu.ErrPublisherExists, http.StatusConflict},         // 409
+		{sfu.ErrSubscriberLimitReached, http.StatusForbidden}, // 403
+		{sfu.ErrNoPublisher, http.StatusNotFound},             // 404
+		{errors.New("generic error"), http.StatusBadRequest},  // 400
+	}
+	for _, tt := range tests {
+		got := statusForSFUError(tt.err)
+		if got != tt.want {
+			t.Errorf("statusForSFUError(%v) = %d, want %d", tt.err, got, tt.want)
+		}
+	}
+}
+
+// TestServeWHEPPlay404WhenRoomAbsent is a RED test: asserts that subscribing
+// to a room that does not exist in the manager returns 404. Currently the
+// manager auto-creates rooms (ensureRoom), so this returns 400 instead.
+func TestServeWHEPPlay404WhenRoomAbsent(t *testing.T) {
+	h, _ := setupTestHandlers()
+	// No room created – manager is empty.
+	req := httptest.NewRequest(http.MethodPost, "/api/whep/play/absent-room", strings.NewReader("v=0\r\n"))
+	w := httptest.NewRecorder()
+
+	h.ServeWHEPPlay(w, req, "absent-room")
+
+	if w.Result().StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404 when room absent from manager, got %d", w.Result().StatusCode)
+	}
+}
+
+// TestWriteJSONError is a RED test: it will fail to compile because
+// writeJSONError does not exist yet. Once the helper is added to handlers.go
+// the test asserts the three-point contract:
+//   - HTTP status is preserved
+//   - Content-Type header includes "application/json"
+//   - body decodes to {"error": "<message>"}
+func TestWriteJSONError(t *testing.T) {
+	w := httptest.NewRecorder()
+	writeJSONError(w, http.StatusNotFound, "no active publisher in room")
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", resp.StatusCode)
+	}
+	ct := resp.Header.Get("Content-Type")
+	if !strings.Contains(ct, "application/json") {
+		t.Fatalf("expected Content-Type to contain application/json, got %q", ct)
+	}
+	var body struct {
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode JSON error body: %v", err)
+	}
+	if body.Error != "no active publisher in room" {
+		t.Fatalf("expected error message %q, got %q", "no active publisher in room", body.Error)
+	}
+}
+
+// TestServeWHEPPlayJSONErrorWhenRoomAbsent is a RED end-to-end test: it asserts
+// that when a subscriber requests a room with no active publisher the handler
+// returns all three parts of the approved domain-error contract:
+//   - HTTP 404
+//   - Content-Type: application/json
+//   - body {"error": "no active publisher in room"}
+//
+// The 404 status code is already correct. This test FAILS because ServeWHEPPlay
+// uses http.Error(), which sets Content-Type: text/plain and writes a plain-text
+// body instead of application/json with a JSON object.
+func TestServeWHEPPlayJSONErrorWhenRoomAbsent(t *testing.T) {
+	h, _ := setupTestHandlers()
+	// No room created; manager has no active publisher.
+	req := httptest.NewRequest(http.MethodPost, "/api/whep/play/absent-room", strings.NewReader("v=0\r\n"))
+	w := httptest.NewRecorder()
+
+	h.ServeWHEPPlay(w, req, "absent-room")
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+	ct := resp.Header.Get("Content-Type")
+	if !strings.Contains(ct, "application/json") {
+		t.Fatalf("expected Content-Type application/json, got %q", ct)
+	}
+	var body struct {
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("body is not valid JSON: %v", err)
+	}
+	const wantMsg = "no active publisher in room"
+	if body.Error != wantMsg {
+		t.Fatalf("expected JSON error %q, got %q", wantMsg, body.Error)
 	}
 }

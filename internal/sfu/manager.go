@@ -78,8 +78,14 @@ func (m *Manager) Publish(ctx context.Context, roomName, offerSDP string) (strin
 }
 
 // Subscribe 根据房间名将 SDP Offer 交给对应 Room 处理，返回 SDP Answer。
+// If the room does not exist, ErrNoPublisher is returned without creating a room.
 func (m *Manager) Subscribe(ctx context.Context, roomName, offerSDP string) (string, error) {
-	r := m.ensureRoom(roomName)
+	m.mu.RLock()
+	r, ok := m.rooms[roomName]
+	m.mu.RUnlock()
+	if !ok {
+		return "", ErrNoPublisher
+	}
 	answer, err := r.Subscribe(ctx, offerSDP)
 	if err != nil {
 		m.deleteRoomIfEmpty(r)
@@ -90,10 +96,10 @@ func (m *Manager) Subscribe(ctx context.Context, roomName, offerSDP string) (str
 
 // RoomInfo 房间状态快照，用于对外暴露。
 type RoomInfo struct {
-	Name         string
-	HasPublisher bool
-	Tracks       int
-	Subscribers  int
+	Name         string `json:"name"`
+	HasPublisher bool   `json:"hasPublisher"`
+	Tracks       int    `json:"tracks"`
+	Subscribers  int    `json:"subscribers"`
 }
 
 // ListRooms 返回所有房间的状态快照。

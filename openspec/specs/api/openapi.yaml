@@ -1,0 +1,426 @@
+openapi: 3.0.3
+info:
+  title: go-live WebRTC SFU API
+  description: |
+    HTTP API for go-live, a lightweight WebRTC SFU server supporting WHIP/WHEP
+    protocols for real-time stream publishing and playback.
+  version: "1.0.0"
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: streaming
+    description: WHIP publish and WHEP play endpoints
+  - name: query
+    description: Room and recording query endpoints
+  - name: admin
+    description: Administrative endpoints requiring admin token
+  - name: observability
+    description: Health and metrics endpoints
+
+paths:
+  /api/whip/publish/{room}:
+    post:
+      tags: [streaming]
+      summary: WHIP Publish
+      description: |
+        Publish a WebRTC stream to the specified room via WHIP protocol.
+        Accepts an SDP offer and returns an SDP answer on success (201 Created).
+      parameters:
+        - $ref: '#/components/parameters/RoomParam'
+      requestBody:
+        required: true
+        content:
+          application/sdp:
+            schema:
+              type: string
+              description: SDP offer from the publisher
+      security:
+        - BearerToken: []
+      responses:
+        '201':
+          description: SDP answer — PeerConnection created successfully
+          content:
+            application/sdp:
+              schema:
+                type: string
+                description: SDP answer from the server
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '409':
+          description: Room already has an active publisher
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "publisher already exists in this room"
+        '413':
+          $ref: '#/components/responses/RequestEntityTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    options:
+      tags: [streaming]
+      summary: CORS preflight for WHIP publish
+      parameters:
+        - $ref: '#/components/parameters/RoomParam'
+      responses:
+        '204':
+          description: CORS preflight response
+
+  /api/whep/play/{room}:
+    post:
+      tags: [streaming]
+      summary: WHEP Play
+      description: |
+        Subscribe to a WebRTC stream from the specified room via WHEP protocol.
+        Accepts an SDP offer and returns an SDP answer on success (201 Created).
+        Returns 404 if the room has no active publisher.
+      parameters:
+        - $ref: '#/components/parameters/RoomParam'
+      requestBody:
+        required: true
+        content:
+          application/sdp:
+            schema:
+              type: string
+              description: SDP offer from the subscriber
+      security:
+        - BearerToken: []
+      responses:
+        '201':
+          description: SDP answer — PeerConnection created successfully
+          content:
+            application/sdp:
+              schema:
+                type: string
+                description: SDP answer from the server
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Subscriber limit for this room has been reached (MAX_SUBS_PER_ROOM)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "subscriber limit reached"
+        '404':
+          description: No active publisher in the room, or room does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "no active publisher in room"
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '413':
+          $ref: '#/components/responses/RequestEntityTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    options:
+      tags: [streaming]
+      summary: CORS preflight for WHEP play
+      parameters:
+        - $ref: '#/components/parameters/RoomParam'
+      responses:
+        '204':
+          description: CORS preflight response
+
+  /api/bootstrap:
+    get:
+      tags: [query]
+      summary: Get Bootstrap Configuration
+      description: Returns runtime configuration required by the frontend application. No authentication required.
+      responses:
+        '200':
+          description: Bootstrap configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapConfig'
+    options:
+      tags: [query]
+      summary: CORS preflight for bootstrap
+      responses:
+        '204':
+          description: CORS preflight response
+
+  /api/rooms:
+    get:
+      tags: [query]
+      summary: List Active Rooms
+      description: Returns all active rooms and their current status. No authentication required.
+      responses:
+        '200':
+          description: List of active rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+    options:
+      tags: [query]
+      summary: CORS preflight for rooms
+      responses:
+        '204':
+          description: CORS preflight response
+
+  /api/records:
+    get:
+      tags: [query]
+      summary: List Recording Files
+      description: Returns metadata for all recording files in the recording directory. No authentication required.
+      responses:
+        '200':
+          description: List of recording files, sorted by modification time descending
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recording'
+    options:
+      tags: [query]
+      summary: CORS preflight for records
+      responses:
+        '204':
+          description: CORS preflight response
+
+  /api/admin/rooms/{room}/close:
+    post:
+      tags: [admin]
+      summary: Force Close Room
+      description: Forcefully close a room, disconnecting all publishers and subscribers.
+      parameters:
+        - $ref: '#/components/parameters/RoomParam'
+      security:
+        - AdminToken: []
+      responses:
+        '200':
+          description: Room closed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  closed:
+                    type: string
+                    description: Name of the closed room
+                    example: myroom
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+    options:
+      tags: [admin]
+      summary: CORS preflight for admin close room
+      parameters:
+        - $ref: '#/components/parameters/RoomParam'
+      responses:
+        '204':
+          description: CORS preflight response
+
+  /healthz:
+    get:
+      tags: [observability]
+      summary: Health Check
+      description: Returns `ok` when the server is running. No authentication required.
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+  /metrics:
+    get:
+      tags: [observability]
+      summary: Prometheus Metrics
+      description: Returns Prometheus-formatted metrics. No authentication required.
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerToken:
+      type: http
+      scheme: bearer
+      description: |
+        Global `AUTH_TOKEN`, per-room token from `ROOM_TOKENS`, or a signed JWT
+        (when `JWT_SECRET` is configured). Supply via `Authorization: Bearer <token>`.
+    AdminToken:
+      type: http
+      scheme: bearer
+      description: Admin token configured via `ADMIN_TOKEN`. Supply via `Authorization: Bearer <token>`.
+
+  parameters:
+    RoomParam:
+      name: room
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{1,64}$'
+        minLength: 1
+        maxLength: 64
+      description: Room name. Must match `^[A-Za-z0-9_-]{1,64}$`.
+
+  schemas:
+    Room:
+      type: object
+      required: [name, hasPublisher, tracks, subscribers]
+      properties:
+        name:
+          type: string
+          description: Room identifier
+          example: demo
+        hasPublisher:
+          type: boolean
+          description: Whether an active publisher is connected
+          example: true
+        tracks:
+          type: integer
+          description: Number of active media tracks in the room
+          example: 2
+        subscribers:
+          type: integer
+          description: Number of active subscriber connections
+          example: 5
+
+    Recording:
+      type: object
+      required: [name, size, modTime, url]
+      properties:
+        name:
+          type: string
+          description: Filename of the recording
+          example: demo_video0_1710123456.ivf
+        size:
+          type: integer
+          format: int64
+          description: File size in bytes
+          example: 1048576
+        modTime:
+          type: string
+          format: date-time
+          description: Last-modified timestamp (RFC 3339 / UTC)
+          example: "2025-01-01T00:00:00Z"
+        url:
+          type: string
+          description: Relative URL to download the recording
+          example: /records/demo_video0_1710123456.ivf
+
+    BootstrapConfig:
+      type: object
+      required: [authEnabled, recordEnabled, iceServers, features]
+      properties:
+        authEnabled:
+          type: boolean
+          description: Whether authentication is enabled
+          example: true
+        recordEnabled:
+          type: boolean
+          description: Whether recording is enabled
+          example: true
+        iceServers:
+          type: array
+          description: ICE server configuration for WebRTC
+          items:
+            type: object
+            properties:
+              urls:
+                type: array
+                items:
+                  type: string
+                example: ["stun:stun.l.google.com:19302"]
+        features:
+          type: object
+          description: Feature flags for the frontend
+          properties:
+            rooms:
+              type: boolean
+            records:
+              type: boolean
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: room not found
+
+  responses:
+    BadRequest:
+      description: Invalid request (bad room name, invalid SDP, etc.)
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "invalid room name"
+    Unauthorized:
+      description: Authentication failed or not provided
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "unauthorized"
+    MethodNotAllowed:
+      description: HTTP method not allowed
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "method not allowed"
+    RequestEntityTooLarge:
+      description: Request body too large (SDP exceeds limit)
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "request body too large"
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "too many requests"
+    InternalServerError:
+      description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "internal server error"

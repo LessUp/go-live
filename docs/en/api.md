@@ -22,7 +22,7 @@ This document details all HTTP API endpoints of live-webrtc-go.
 
 ## Authentication
 
-The system supports three authentication methods, tried in order of priority:
+The system supports two authentication methods, tried in order of priority:
 
 ### 1. Bearer Token
 
@@ -34,12 +34,6 @@ Authorization: Bearer <token>
 
 ```http
 X-Auth-Token: <token>
-```
-
-### 3. URL Query Parameter
-
-```http
-GET /api/rooms?token=<token>
 ```
 
 ### Authentication Priority
@@ -77,7 +71,7 @@ SDP Offer (text/plain)
 
 | Status Code | Description |
 |-------------|-------------|
-| 200 | Success, returns SDP Answer |
+| 201 | Success, returns SDP Answer |
 | 400 | Invalid SDP or room name |
 | 401 | Authentication failed |
 | 409 | Room already has a publisher |
@@ -118,10 +112,11 @@ SDP Offer (text/plain)
 
 | Status Code | Description |
 |-------------|-------------|
-| 200 | Success, returns SDP Answer |
+| 201 | Success, returns SDP Answer |
 | 400 | Invalid SDP or room name |
 | 401 | Authentication failed |
-| 404 | Room not found |
+| 403 | Subscriber limit reached (`MAX_SUBS_PER_ROOM`) |
+| 404 | No active publisher in room |
 | 429 | Rate limit exceeded |
 
 **Example**
@@ -189,12 +184,14 @@ GET /api/rooms
   {
     "name": "demo",
     "hasPublisher": true,
-    "subscriberCount": 5
+    "tracks": 2,
+    "subscribers": 5
   },
   {
     "name": "test",
     "hasPublisher": false,
-    "subscriberCount": 0
+    "tracks": 0,
+    "subscribers": 0
   }
 ]
 ```
@@ -205,7 +202,8 @@ GET /api/rooms
 |-------|------|-------------|
 | `name` | string | Room name |
 | `hasPublisher` | boolean | Whether room has a publisher |
-| `subscriberCount` | number | Number of subscribers |
+| `tracks` | number | Number of active media tracks |
+| `subscribers` | number | Number of active subscriber connections |
 
 ---
 
@@ -224,7 +222,8 @@ GET /api/records
   {
     "name": "demo_video0_1710123456.ivf",
     "size": 1048576,
-    "modTime": "2024-03-10T12:34:56Z"
+    "modTime": "2024-03-10T12:34:56Z",
+    "url": "/records/demo_video0_1710123456.ivf"
   }
 ]
 ```
@@ -235,7 +234,8 @@ GET /api/records
 |-------|------|-------------|
 | `name` | string | File name |
 | `size` | number | File size in bytes |
-| `modTime` | string | Modification time (ISO 8601) |
+| `modTime` | string | Modification time (ISO 8601 / RFC 3339 UTC) |
+| `url` | string | Relative URL to download the recording |
 
 ---
 
@@ -317,13 +317,15 @@ curl http://localhost:8080/metrics
 
 ## Error Responses
 
-All error responses follow this format:
+Domain-specific WHIP/WHEP errors use this JSON format:
 
 ```json
 {
   "error": "Error description"
 }
 ```
+
+Generic HTTP errors produced by shared validation, auth, body-size, method, or rate-limit checks may still be returned as plain text.
 
 ### Common Error Codes
 
@@ -332,8 +334,9 @@ All error responses follow this format:
 | 400 | `invalid room name` | Invalid room name format |
 | 400 | `invalid SDP` | Invalid SDP format |
 | 401 | `unauthorized` | Authentication failed or not provided |
-| 404 | `room not found` | Room does not exist (during WHEP play) |
-| 409 | `publisher already exists` | Room already has a publisher |
+| 403 | `subscriber limit reached` | `MAX_SUBS_PER_ROOM` limit hit (WHEP) |
+| 404 | `no active publisher in room` | No publisher in room (WHEP play) |
+| 409 | `publisher already exists in this room` | Room already has a publisher (WHIP) |
 | 429 | `too many requests` | Rate limit triggered |
 | 500 | `internal server error` | Internal server error |
 

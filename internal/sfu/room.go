@@ -22,6 +22,15 @@ import (
 var uploadRecordingFile = uploader.Upload
 var uploaderEnabled = uploader.Enabled
 
+// ErrPublisherExists is returned when a second publisher attempts to join a room that already has one.
+var ErrPublisherExists = errors.New("publisher already exists in this room")
+
+// ErrSubscriberLimitReached is returned when the per-room subscriber cap has been hit.
+var ErrSubscriberLimitReached = errors.New("subscriber limit reached")
+
+// ErrNoPublisher is returned when a subscriber attempts to join a room with no active publisher.
+var ErrNoPublisher = errors.New("no active publisher in room")
+
 // Room 表示一个 SFU 房间，维护发布者、订阅者与轨道 fanout。
 type Room struct {
 	name       string
@@ -30,6 +39,12 @@ type Room struct {
 	trackFeeds map[string]*trackFanout // key: track ID
 	subs       map[*webrtc.PeerConnection]struct{}
 	mgr        *Manager
+
+	// testHookBeforeInsert is called inside Subscribe after r.mu.Lock() is
+	// acquired and before the subscriber is inserted into r.subs. It is nil
+	// in production and set only by unit tests to inject deterministic
+	// concurrency scenarios while holding the write lock.
+	testHookBeforeInsert func()
 }
 
 // NewRoom 初始化房间默认状态。
@@ -163,7 +178,7 @@ func (r *Room) Publish(ctx context.Context, offerSDP string) (string, error) {
 	if r.publisher != nil {
 		r.mu.Unlock()
 		_ = pc.Close()
-		return "", errors.New("publisher already exists in this room")
+		return "", ErrPublisherExists
 	}
 	r.publisher = pc
 	r.mu.Unlock()
@@ -207,14 +222,18 @@ func (r *Room) Publish(ctx context.Context, offerSDP string) (string, error) {
 func (r *Room) Subscribe(ctx context.Context, offerSDP string) (string, error) {
 	_ = ctx
 
+	r.mu.RLock()
 	if r.mgr != nil && r.mgr.cfg != nil && r.mgr.cfg.MaxSubsPerRoom > 0 {
-		r.mu.RLock()
 		if len(r.subs) >= r.mgr.cfg.MaxSubsPerRoom {
 			r.mu.RUnlock()
-			return "", fmt.Errorf("subscriber limit reached")
+			return "", ErrSubscriberLimitReached
 		}
-		r.mu.RUnlock()
 	}
+	if r.publisher == nil {
+		r.mu.RUnlock()
+		return "", ErrNoPublisher
+	}
+	r.mu.RUnlock()
 	m := &webrtc.MediaEngine{}
 	if err := m.RegisterDefaultCodecs(); err != nil {
 		return "", fmt.Errorf("register codecs: %w", err)
@@ -231,6 +250,25 @@ func (r *Room) Subscribe(ctx context.Context, offerSDP string) (string, error) {
 	}
 
 	r.mu.Lock()
+	// Re-check both constraints under the write lock to close the stale-check
+	// window: between the optimistic RLock check above and this Lock, a
+	// concurrent Subscribe may have already inserted a subscriber (exceeding
+	// MaxSubsPerRoom) or the publisher may have disconnected.
+	if r.testHookBeforeInsert != nil {
+		r.testHookBeforeInsert()
+	}
+	if r.mgr != nil && r.mgr.cfg != nil && r.mgr.cfg.MaxSubsPerRoom > 0 {
+		if len(r.subs) >= r.mgr.cfg.MaxSubsPerRoom {
+			r.mu.Unlock()
+			_ = pc.Close()
+			return "", ErrSubscriberLimitReached
+		}
+	}
+	if r.publisher == nil {
+		r.mu.Unlock()
+		_ = pc.Close()
+		return "", ErrNoPublisher
+	}
 	r.subs[pc] = struct{}{}
 	r.syncSubscriberMetricsLocked()
 	feeds := make([]*trackFanout, 0, len(r.trackFeeds))
