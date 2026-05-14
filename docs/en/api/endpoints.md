@@ -1,24 +1,6 @@
----
-layout: default
-title: API Reference
-nav_order: 4
-lang: en
----
+# API Endpoints
 
-# API Reference
-
-This document details all HTTP API endpoints of live-webrtc-go.
-
-{: .no_toc }
-
-## Table of Contents
-
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
+Complete reference for all HTTP API endpoints.
 
 ## Authentication
 
@@ -43,8 +25,6 @@ X-Auth-Token: <token>
 3. JWT (`JWT_SECRET`)
 4. No authentication (when not configured)
 
----
-
 ## Streaming Endpoints
 
 ### WHIP Publish
@@ -63,9 +43,7 @@ Authorization: Bearer <token>
 |-----------|----------|------|----------|-------------|
 | `room` | path | string | Yes | Room name, matches `^[A-Za-z0-9_-]{1,64}$` |
 
-**Request Body**
-
-SDP Offer (text/plain)
+**Request Body**: SDP Offer (text/plain)
 
 **Response**
 
@@ -77,16 +55,12 @@ SDP Offer (text/plain)
 | 409 | Room already has a publisher |
 | 429 | Rate limit exceeded |
 
-**Example**
-
 ```bash
 curl -X POST "http://localhost:8080/api/whip/publish/demo" \
   -H "Content-Type: application/sdp" \
   -H "Authorization: Bearer mytoken" \
   --data-binary @offer.sdp
 ```
-
----
 
 ### WHEP Play
 
@@ -104,9 +78,7 @@ Authorization: Bearer <token>
 |-----------|----------|------|----------|-------------|
 | `room` | path | string | Yes | Room name |
 
-**Request Body**
-
-SDP Offer (text/plain)
+**Request Body**: SDP Offer (text/plain)
 
 **Response**
 
@@ -119,16 +91,12 @@ SDP Offer (text/plain)
 | 404 | No active publisher in room |
 | 429 | Rate limit exceeded |
 
-**Example**
-
 ```bash
 curl -X POST "http://localhost:8080/api/whep/play/demo" \
   -H "Content-Type: application/sdp" \
   -H "Authorization: Bearer mytoken" \
   --data-binary @offer.sdp
 ```
-
----
 
 ## Query Endpoints
 
@@ -158,17 +126,6 @@ GET /api/bootstrap
 }
 ```
 
-**Field Descriptions**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `authEnabled` | boolean | Whether authentication is enabled |
-| `recordEnabled` | boolean | Whether recording is enabled |
-| `iceServers` | array | ICE server configuration |
-| `features` | object | Feature flags |
-
----
-
 ### Get Room List
 
 Returns all active rooms and their status.
@@ -186,26 +143,9 @@ GET /api/rooms
     "hasPublisher": true,
     "tracks": 2,
     "subscribers": 5
-  },
-  {
-    "name": "test",
-    "hasPublisher": false,
-    "tracks": 0,
-    "subscribers": 0
   }
 ]
 ```
-
-**Field Descriptions**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Room name |
-| `hasPublisher` | boolean | Whether room has a publisher |
-| `tracks` | number | Number of active media tracks |
-| `subscribers` | number | Number of active subscriber connections |
-
----
 
 ### Get Recording List
 
@@ -228,17 +168,6 @@ GET /api/records
 ]
 ```
 
-**Field Descriptions**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | File name |
-| `size` | number | File size in bytes |
-| `modTime` | string | Modification time (ISO 8601 / RFC 3339 UTC) |
-| `url` | string | Relative URL to download the recording |
-
----
-
 ## Admin Endpoints
 
 ### Close Room
@@ -250,12 +179,6 @@ POST /api/admin/rooms/{room}/close
 Authorization: Bearer <admin-token>
 ```
 
-**Parameters**
-
-| Parameter | Location | Type | Required | Description |
-|-----------|----------|------|----------|-------------|
-| `room` | path | string | Yes | Room name to close |
-
 **Response**
 
 | Status Code | Description |
@@ -263,16 +186,6 @@ Authorization: Bearer <admin-token>
 | 200 | Successfully closed |
 | 401 | Authentication failed (requires Admin Token) |
 | 404 | Room not found |
-
-**Example**
-
-```bash
-curl -X POST \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  http://localhost:8080/api/admin/rooms/demo/close
-```
-
----
 
 ## Health and Metrics
 
@@ -282,15 +195,7 @@ curl -X POST \
 GET /healthz
 ```
 
-**Response**
-
-```
-ok
-```
-
-Status code: 200
-
----
+Returns `ok` with status code 200.
 
 ### Prometheus Metrics
 
@@ -298,22 +203,12 @@ Status code: 200
 GET /metrics
 ```
 
-**Available Metrics**
-
 | Metric Name | Type | Labels | Description |
 |-------------|------|--------|-------------|
 | `live_rooms` | Gauge | - | Active room count |
 | `live_subscribers` | GaugeVec | `room` | Subscribers per room |
 | `live_rtp_bytes_total` | CounterVec | `room` | Total RTP bytes |
 | `live_rtp_packets_total` | CounterVec | `room` | Total RTP packets |
-
-**Example**
-
-```bash
-curl http://localhost:8080/metrics
-```
-
----
 
 ## Error Responses
 
@@ -325,8 +220,6 @@ Domain-specific WHIP/WHEP errors use this JSON format:
 }
 ```
 
-Generic HTTP errors produced by shared validation, auth, body-size, method, or rate-limit checks may still be returned as plain text.
-
 ### Common Error Codes
 
 | Status Code | Error Message | Reason |
@@ -334,27 +227,11 @@ Generic HTTP errors produced by shared validation, auth, body-size, method, or r
 | 400 | `invalid room name` | Invalid room name format |
 | 400 | `invalid SDP` | Invalid SDP format |
 | 401 | `unauthorized` | Authentication failed or not provided |
-| 403 | `subscriber limit reached` | `MAX_SUBS_PER_ROOM` limit hit (WHEP) |
-| 404 | `no active publisher in room` | No publisher in room (WHEP play) |
-| 409 | `publisher already exists in this room` | Room already has a publisher (WHIP) |
+| 403 | `subscriber limit reached` | `MAX_SUBS_PER_ROOM` limit hit |
+| 404 | `no active publisher in room` | No publisher in room |
+| 409 | `publisher already exists in this room` | Room already has a publisher |
 | 429 | `too many requests` | Rate limit triggered |
 | 500 | `internal server error` | Internal server error |
-
----
-
-## CORS Configuration
-
-All API responses include CORS headers:
-
-```http
-Access-Control-Allow-Origin: <ALLOWED_ORIGIN>
-Access-Control-Allow-Methods: GET, POST, OPTIONS
-Access-Control-Allow-Headers: Content-Type, Authorization, X-Auth-Token
-```
-
-Preflight requests (OPTIONS) automatically return 204.
-
----
 
 ## Request Limits
 
@@ -365,14 +242,12 @@ Preflight requests (OPTIONS) automatically return 204.
 | Request rate | Configurable | `RATE_LIMIT_RPS`, `RATE_LIMIT_BURST` |
 | Subscribers per room | Configurable | `MAX_SUBS_PER_ROOM` |
 
----
+## CORS Configuration
 
-## Room Name Rules
+All API responses include CORS headers:
 
-- **Allowed characters**: `A-Z`, `a-z`, `0-9`, `_`, `-`
-- **Maximum length**: 64 characters
-- **Pattern**: `^[A-Za-z0-9_-]{1,64}$`
-
-**Valid examples**: `room1`, `my-room`, `live_stream_01`
-
-**Invalid examples**: `my room`, `room@123`, `a` (too short if min>1)
+```http
+Access-Control-Allow-Origin: <ALLOWED_ORIGIN>
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Auth-Token
+```

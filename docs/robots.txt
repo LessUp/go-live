@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://lessup.github.io/go-live/sitemap.xml
-
-Crawl-delay: 1

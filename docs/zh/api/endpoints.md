@@ -1,24 +1,6 @@
----
-layout: default
-title: API 参考
-nav_order: 4
-lang: zh
----
+# API 端点
 
-# API 参考
-
-本文档详细介绍 live-webrtc-go 的所有 HTTP API 端点。
-
-{: .no_toc }
-
-## 目录
-
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
+所有 HTTP API 端点的完整参考。
 
 ## 认证方式
 
@@ -43,8 +25,6 @@ X-Auth-Token: <token>
 3. JWT (`JWT_SECRET`)
 4. 无认证（未配置认证时）
 
----
-
 ## 流媒体接口
 
 ### WHIP 推流
@@ -63,9 +43,7 @@ Authorization: Bearer <token>
 |------|------|------|------|------|
 | `room` | path | string | 是 | 房间名，匹配 `^[A-Za-z0-9_-]{1,64}$` |
 
-**请求体**
-
-SDP Offer (text/plain)
+**请求体**: SDP Offer (text/plain)
 
 **响应**
 
@@ -77,16 +55,12 @@ SDP Offer (text/plain)
 | 409 | 房间已有发布者 |
 | 429 | 请求频率超限 |
 
-**示例**
-
 ```bash
 curl -X POST "http://localhost:8080/api/whip/publish/demo" \
   -H "Content-Type: application/sdp" \
   -H "Authorization: Bearer mytoken" \
   --data-binary @offer.sdp
 ```
-
----
 
 ### WHEP 播放
 
@@ -104,9 +78,7 @@ Authorization: Bearer <token>
 |------|------|------|------|------|
 | `room` | path | string | 是 | 房间名 |
 
-**请求体**
-
-SDP Offer (text/plain)
+**请求体**: SDP Offer (text/plain)
 
 **响应**
 
@@ -118,17 +90,6 @@ SDP Offer (text/plain)
 | 403 | 订阅者数量已达上限（`MAX_SUBS_PER_ROOM`） |
 | 404 | 房间无活跃发布者 |
 | 429 | 请求频率超限 |
-
-**示例**
-
-```bash
-curl -X POST "http://localhost:8080/api/whep/play/demo" \
-  -H "Content-Type: application/sdp" \
-  -H "Authorization: Bearer mytoken" \
-  --data-binary @offer.sdp
-```
-
----
 
 ## 状态查询接口
 
@@ -158,17 +119,6 @@ GET /api/bootstrap
 }
 ```
 
-**字段说明**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `authEnabled` | boolean | 是否启用认证 |
-| `recordEnabled` | boolean | 是否启用录制 |
-| `iceServers` | array | ICE 服务器配置 |
-| `features` | object | 功能开关 |
-
----
-
 ### 获取房间列表
 
 返回所有活跃房间及其状态。
@@ -186,26 +136,9 @@ GET /api/rooms
     "hasPublisher": true,
     "tracks": 2,
     "subscribers": 5
-  },
-  {
-    "name": "test",
-    "hasPublisher": false,
-    "tracks": 0,
-    "subscribers": 0
   }
 ]
 ```
-
-**字段说明**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `name` | string | 房间名 |
-| `hasPublisher` | boolean | 是否有发布者 |
-| `tracks` | number | 活跃媒体轨道数量 |
-| `subscribers` | number | 活跃订阅者连接数量 |
-
----
 
 ### 获取录制列表
 
@@ -228,17 +161,6 @@ GET /api/records
 ]
 ```
 
-**字段说明**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `name` | string | 文件名 |
-| `size` | number | 文件大小（字节） |
-| `modTime` | string | 修改时间（ISO 8601 / RFC 3339 UTC） |
-| `url` | string | 下载录制文件的相对 URL |
-
----
-
 ## 管理接口
 
 ### 关闭房间
@@ -250,12 +172,6 @@ POST /api/admin/rooms/{room}/close
 Authorization: Bearer <admin-token>
 ```
 
-**参数**
-
-| 参数 | 位置 | 类型 | 必需 | 说明 |
-|------|------|------|------|------|
-| `room` | path | string | 是 | 要关闭的房间名 |
-
 **响应**
 
 | 状态码 | 说明 |
@@ -263,16 +179,6 @@ Authorization: Bearer <admin-token>
 | 200 | 成功关闭 |
 | 401 | 认证失败（需要 Admin Token） |
 | 404 | 房间不存在 |
-
-**示例**
-
-```bash
-curl -X POST \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  http://localhost:8080/api/admin/rooms/demo/close
-```
-
----
 
 ## 健康与监控
 
@@ -282,15 +188,7 @@ curl -X POST \
 GET /healthz
 ```
 
-**响应**
-
-```
-ok
-```
-
-状态码：200
-
----
+返回 `ok`，状态码 200。
 
 ### Prometheus 指标
 
@@ -298,22 +196,12 @@ ok
 GET /metrics
 ```
 
-**可用指标**
-
 | 指标名 | 类型 | 标签 | 说明 |
 |--------|------|------|------|
 | `live_rooms` | Gauge | - | 活跃房间数 |
 | `live_subscribers` | GaugeVec | `room` | 每房间订阅者数 |
 | `live_rtp_bytes_total` | CounterVec | `room` | RTP 字节总数 |
 | `live_rtp_packets_total` | CounterVec | `room` | RTP 包总数 |
-
-**示例**
-
-```bash
-curl http://localhost:8080/metrics
-```
-
----
 
 ## 错误响应
 
@@ -325,8 +213,6 @@ WHIP/WHEP 的领域错误使用以下 JSON 格式：
 }
 ```
 
-由通用校验、认证、请求体大小、HTTP 方法或限流逻辑产生的通用 HTTP 错误，仍可能返回纯文本响应。
-
 ### 常见错误码
 
 | 状态码 | 错误信息 | 原因 |
@@ -334,27 +220,11 @@ WHIP/WHEP 的领域错误使用以下 JSON 格式：
 | 400 | `invalid room name` | 房间名格式错误 |
 | 400 | `invalid SDP` | SDP 格式错误 |
 | 401 | `unauthorized` | 认证失败或未提供 |
-| 403 | `subscriber limit reached` | 已达订阅者上限（WHEP） |
-| 404 | `no active publisher in room` | 房间无发布者（WHEP 播放时） |
-| 409 | `publisher already exists in this room` | 房间已有发布者（WHIP） |
+| 403 | `subscriber limit reached` | 已达订阅者上限 |
+| 404 | `no active publisher in room` | 房间无发布者 |
+| 409 | `publisher already exists in this room` | 房间已有发布者 |
 | 429 | `too many requests` | 触发限流 |
 | 500 | `internal server error` | 服务器内部错误 |
-
----
-
-## CORS 配置
-
-所有 API 响应包含 CORS 头：
-
-```http
-Access-Control-Allow-Origin: <ALLOWED_ORIGIN>
-Access-Control-Allow-Methods: GET, POST, OPTIONS
-Access-Control-Allow-Headers: Content-Type, Authorization, X-Auth-Token
-```
-
-预检请求 (OPTIONS) 自动返回 204。
-
----
 
 ## 请求限制
 
@@ -365,14 +235,12 @@ Access-Control-Allow-Headers: Content-Type, Authorization, X-Auth-Token
 | 请求频率 | 可配置 | `RATE_LIMIT_RPS`, `RATE_LIMIT_BURST` |
 | 每房间订阅者 | 可配置 | `MAX_SUBS_PER_ROOM` |
 
----
+## CORS 配置
 
-## 房间名规则
+所有 API 响应包含 CORS 头：
 
-- **允许字符**：`A-Z`、`a-z`、`0-9`、`_`、`-`
-- **最大长度**：64 个字符
-- **正则模式**：`^[A-Za-z0-9_-]{1,64}$`
-
-**有效示例**：`room1`、`my-room`、`live_stream_01`
-
-**无效示例**：`my room`（含空格）、`room@123`（含特殊字符）
+```http
+Access-Control-Allow-Origin: <ALLOWED_ORIGIN>
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Auth-Token
+```
